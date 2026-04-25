@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>优码智库AI搜索站</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="top-bar">
+      <span id="topDate"></span>
+      <button id="loginBtn" class="login-btn">登录</button>
+    </div>
+
+    <header class="header" style="padding: 48px;">
+      <h1>优码智库AI搜索站</h1>
+      <p>智能聚合行业资讯、招标信息与分析报告</p>
+    </header>
+
+    <div class="func-grid">
+      <a href="city-update.html" class="func-card glass-card">
+        <span class="icon">🏙️</span>
+        <h3>城市更新日报</h3>
+        <p>汇聚中央与地方城市更新政策、实践案例、数字化动态，AI 智能总结</p>
+        <span class="badge badge-active">已上线</span>
+      </a>
+
+      <a href="daily.html" class="func-card glass-card">
+        <span class="icon">📋</span>
+        <h3>行业日报</h3>
+        <p>地产 · 物业 · 园区 · 医院等不动产行业每日精选，含政策法规、企业动态与 AI 洞察</p>
+        <span class="badge badge-active">已上线</span>
+      </a>
+
+      <a href="competitor.html" class="func-card glass-card">
+        <span class="icon">🏢</span>
+        <h3>竞品动态</h3>
+        <p>头部房企/物企数字化转型、产品发布、市场策略跟踪分析</p>
+        <span class="badge badge-dev">开发中</span>
+      </a>
+
+      <a href="bidding.html" class="func-card glass-card">
+        <span class="icon">📑</span>
+        <h3>招标信息</h3>
+        <p>智慧城市、智慧物业、城市更新相关招投标信息聚合与筛选</p>
+        <span class="badge badge-dev">开发中</span>
+      </a>
+    </div>
+
+    <footer style="text-align: center; padding: 40px; color: rgba(255,255,255,0.25); font-size: 13px;">
+      <p>优码智库 · AI 驱动的不动产行业信息聚合平台</p>
+    </footer>
+  </div>
+
+  <!-- 登录弹窗 -->
+  <div id="loginModal" class="login-modal hidden">
+    <div class="login-content glass-card">
+      <div class="login-header">
+        <h2>🔐 优码智库AI搜索站</h2>
+        <p>请输入账号密码访问优码智库</p>
+      </div>
+      <input type="text" id="loginUser" placeholder="账号" />
+      <input type="password" id="loginPass" placeholder="密码" />
+      <button id="doLogin">登录</button>
+      <p id="loginError" class="login-error hidden">账号或密码错误</p>
+    </div>
+  </div>
+
+  <script>
+    // 右上角日期
+    function updateDate() {
+      const now = new Date();
+      const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const w = weekdays[now.getDay()];
+      document.getElementById("topDate").innerHTML = `<span style="background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); font-size: 14px; color: rgba(255,255,255,0.85);">${y}年${m}月${d}日 ${w}</span>`;
+    }
+    updateDate();
+
+    // 登录逻辑
+    const CORRECT_USER = "admin";
+    const CORRECT_PASS = "youma2024";
+    const LOGIN_KEY = "youma_logged_in";
+    const loginBtn = document.getElementById("loginBtn");
+
+    function updateLoginBtn() {
+      if (localStorage.getItem(LOGIN_KEY)) {
+        loginBtn.textContent = "退出";
+        loginBtn.style.background = "rgba(239,68,68,0.15)";
+        loginBtn.style.borderColor = "rgba(239,68,68,0.3)";
+        loginBtn.style.color = "#fca5a5";
+      } else {
+        loginBtn.textContent = "登录";
+        loginBtn.style.background = "rgba(255,255,255,0.06)";
+        loginBtn.style.borderColor = "rgba(255,255,255,0.2)";
+        loginBtn.style.color = "rgba(255,255,255,0.7)";
+      }
+    }
+
+    function checkLogin() {
+      if (!localStorage.getItem(LOGIN_KEY)) {
+        document.getElementById("loginModal").classList.remove("hidden");
+        document.body.style.overflow = "hidden";
+      }
+    }
+
+    loginBtn.addEventListener("click", () => {
+      if (localStorage.getItem(LOGIN_KEY)) {
+        localStorage.removeItem(LOGIN_KEY);
+        location.reload();
+      }
+    });
+
+    document.getElementById("doLogin").addEventListener("click", () => {
+      const u = document.getElementById("loginUser").value.trim();
+      const p = document.getElementById("loginPass").value.trim();
+      if (u === CORRECT_USER && p === CORRECT_PASS) {
+        localStorage.setItem(LOGIN_KEY, "1");
+        document.getElementById("loginModal").classList.add("hidden");
+        document.body.style.overflow = "";
+        updateLoginBtn();
+      } else {
+        document.getElementById("loginError").classList.remove("hidden");
+      }
+    });
+
+    document.getElementById("loginPass").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") document.getElementById("doLogin").click();
+    });
+
+    updateLoginBtn();
+    checkLogin();
+  </script>
+</body>
+</html>

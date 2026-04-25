@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>今日行业日报 - 优码智库AI搜索站</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="back-nav">
+      <a href="/">← 返回首页</a>
+      <span id="dailyDate" class="date"></span>
+    </div>
+
+    <header class="header" style="margin-bottom: 30px;">
+      <h1 style="font-size: 32px;">📋 今日行业日报</h1>
+      <p>不动产行业每日精选：地产 · 物业 · 园区 · 医院</p>
+    </header>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="例如：万科、智慧物业、物业数字化..." />
+      <button id="searchBtn">🔍 搜索</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>正在搜索政策法规、行业要闻、企业动态并生成洞察...</p>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div class="stats-bar" id="statsBar"></div>
+
+      <div class="section-card insight-card">
+        <h2>💡 优码今日洞察</h2>
+        <div id="insightsContent"></div>
+      </div>
+
+      <div class="category-tabs" id="categoryTabs">
+        <button class="tab-btn active" data-cat="all">全部</button>
+        <button class="tab-btn" data-cat="政策法规速递">政策法规速递</button>
+        <button class="tab-btn" data-cat="行业要闻精选">行业要闻精选</button>
+        <button class="tab-btn" data-cat="企业动态精选">企业动态精选</button>
+      </div>
+
+      <div id="newsList" class="news-list"></div>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+  </div>
+
+  <script>
+    document.getElementById("dailyDate").textContent = new Date().toLocaleDateString("zh-CN", {
+      year: "numeric", month: "long", day: "numeric", weekday: "long"
+    });
+
+    const searchInput = document.getElementById("searchInput");
+    const searchBtn = document.getElementById("searchBtn");
+    const loading = document.getElementById("loading");
+    const results = document.getElementById("results");
+    const error = document.getElementById("error");
+    const statsBar = document.getElementById("statsBar");
+    const newsList = document.getElementById("newsList");
+    const categoryTabs = document.getElementById("categoryTabs");
+
+    let currentData = null;
+    let activeCategory = "all";
+
+    searchBtn.addEventListener("click", doSearch);
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") doSearch();
+    });
+
+    categoryTabs.addEventListener("click", (e) => {
+      if (e.target.classList.contains("tab-btn")) {
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        e.target.classList.add("active");
+        activeCategory = e.target.dataset.cat;
+        renderNewsList();
+      }
+    });
+
+    async function doSearch() {
+      const query = searchInput.value.trim();
+
+      searchBtn.disabled = true;
+      searchBtn.textContent = "搜索中...";
+      results.classList.add("hidden");
+      error.classList.add("hidden");
+      loading.classList.remove("hidden");
+
+      try {
+        const url = query
+          ? `/api/daily?q=${encodeURIComponent(query)}`
+          : "/api/daily";
+        const res = await fetch(url);
+        const data = await res.json();
+
+        loading.classList.add("hidden");
+        searchBtn.disabled = false;
+        searchBtn.textContent = "🔍 搜索";
+
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+
+        currentData = data;
+        renderResults(data);
+      } catch (err) {
+        loading.classList.add("hidden");
+        searchBtn.disabled = false;
+        searchBtn.textContent = "🔍 搜索";
+        showError(`请求失败: ${err.message}`);
+      }
+    }
+
+    function renderResults(data) {
+      results.classList.remove("hidden");
+
+      const catCounts = [];
+      if (data.categories) {
+        for (const [cat, items] of Object.entries(data.categories)) {
+          if (items.length > 0) {
+            catCounts.push(`${cat}: ${items.length}条`);
+          }
+        }
+      }
+      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${c}</span>`).join("");
+
+      const insights = data.insights || {};
+      document.getElementById("insightsContent").innerHTML = `
+        <div class="insight-section">
+          <h4>🔑 关键词</h4>
+          <p>${escapeHtml(insights.keywords || "暂无")}</p>
+        </div>
+        <div class="insight-section">
+          <h4>📈 趋势研判</h4>
+          <p>${escapeHtml(insights.trend || "暂无")}</p>
+        </div>
+        <div class="insight-section">
+          <h4>🎯 营销建议</h4>
+          <p>${escapeHtml(insights.marketing || "暂无")}</p>
+        </div>
+        <div class="insight-section">
+          <h4>👁️ 明日关注</h4>
+          <p>${escapeHtml(insights.tomorrow || "暂无")}</p>
+        </div>
+      `;
+
+      renderNewsList();
+    }
+
+    function renderNewsList() {
+      if (!currentData) return;
+
+      let items = [];
+      if (activeCategory === "all") {
+        items = currentData.results || [];
+      } else if (currentData.categories && currentData.categories[activeCategory]) {
+        items = currentData.categories[activeCategory];
+      }
+
+      newsList.innerHTML = "";
+
+      if (items.length === 0) {
+        newsList.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:40px;">该分类下暂无新闻</p>';
+        return;
+      }
+
+      items.forEach((r) => {
+        const card = document.createElement("a");
+        card.className = "news-card";
+        card.href = r.url;
+        card.target = "_blank";
+        card.rel = "noopener";
+
+        const dateStr = r.pubDate ? formatDate(r.pubDate) : "";
+        const enterpriseTag = r.enterprise ? `<span class="enterprise-tag">${escapeHtml(r.enterprise)}</span>` : "";
+        const catClass = `cat-${r.category || "行业要闻精选"}`;
+
+        card.innerHTML = `
+          <div class="news-card-header">
+            <h3>${escapeHtml(r.title)}${enterpriseTag}</h3>
+            <span class="news-category ${catClass}">${escapeHtml(r.category || "行业要闻精选")}</span>
+          </div>
+          <p>${escapeHtml(r.abstract || "")}</p>
+          <div class="news-meta">
+            <span class="source">${escapeHtml(r.source || "未知来源")}</span>
+            ${dateStr ? `<span class="date">📅 ${dateStr}</span>` : ""}
+          </div>
+        `;
+        newsList.appendChild(card);
+      });
+    }
+
+    function formatDate(isoDate) {
+      try {
+        const d = new Date(isoDate);
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, "0");
+        const day = d.getDate().toString().padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      } catch {
+        return "";
+      }
+    }
+
+    function showError(msg) {
+      error.textContent = msg;
+      error.classList.remove("hidden");
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+  </script>
+</body>
+</html>

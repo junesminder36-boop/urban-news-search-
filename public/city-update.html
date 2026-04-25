@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>城市更新日报 - 优码智库AI搜索站</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="back-nav">
+      <a href="/">← 返回首页</a>
+      <span class="date">城市更新日报</span>
+    </div>
+
+    <header class="header" style="margin-bottom: 30px;">
+      <h1 style="font-size: 32px;">🏙️ 城市更新日报</h1>
+      <p>汇聚中央与地方政策、实践案例、数字化动态</p>
+    </header>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="例如：城市更新、深圳旧改、城中村改造..." />
+      <button id="searchBtn">🔍 搜索</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>正在从中央及各地政府网站、媒体RSS抓取新闻并分析...</p>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div class="stats-bar" id="statsBar"></div>
+
+      <div class="ai-summary-card">
+        <h2>🤖 AI 综合分析</h2>
+        <div id="summaryContent" class="summary-content"></div>
+        <div id="highlightsContent" class="highlights-content"></div>
+      </div>
+
+      <div class="category-tabs" id="categoryTabs">
+        <button class="tab-btn active" data-cat="all">全部</button>
+        <button class="tab-btn" data-cat="中央政策">中央政策</button>
+        <button class="tab-btn" data-cat="地方政策">地方政策</button>
+        <button class="tab-btn" data-cat="地方实践案例">地方实践案例</button>
+        <button class="tab-btn" data-cat="城市更新数字化">城市更新数字化</button>
+        <button class="tab-btn" data-cat="行业观点">行业观点</button>
+      </div>
+
+      <div id="newsList" class="news-list"></div>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
