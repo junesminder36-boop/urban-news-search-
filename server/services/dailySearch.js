@@ -133,9 +133,24 @@ function scoreNews(item) {
   return score;
 }
 
-async function searchBaidu(keyword) {
+// 过滤指定天数内的新闻
+function filterByDate(items, days = 3) {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  cutoff.setHours(0, 0, 0, 0);
+  return items.filter((item) => {
+    const d = new Date(item.pubDate || Date.now());
+    return d >= cutoff;
+  });
+}
+
+async function searchBaidu(keyword, days = 3) {
   try {
-    const url = `https://www.baidu.com/s?wd=${encodeURIComponent(keyword)}`;
+    // 百度时间过滤参数：gpc=stf=开始时间戳,结束时间戳|stftype=1
+    const endTime = Math.floor(Date.now() / 1000);
+    const startTime = endTime - days * 24 * 60 * 60;
+    const gpc = `stf=${startTime},${endTime}|stftype=1`;
+    const url = `https://www.baidu.com/s?wd=${encodeURIComponent(keyword)}&gpc=${encodeURIComponent(gpc)}`;
     const res = await axios.get(url, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -218,29 +233,29 @@ function parseDateFromBaidu(dateText) {
   return new Date().toISOString();
 }
 
-async function searchPolicyNews() {
+async function searchPolicyNews(days = 3) {
   const all = [];
   for (const kw of POLICY_KEYWORDS) {
-    const results = await searchBaidu(kw);
+    const results = await searchBaidu(kw, days);
     all.push(...results);
   }
   return deduplicate(all);
 }
 
-async function searchIndustryNews() {
+async function searchIndustryNews(days = 3) {
   const all = [];
   for (const kw of INDUSTRY_KEYWORDS) {
-    const results = await searchBaidu(kw);
+    const results = await searchBaidu(kw, days);
     all.push(...results);
   }
   return deduplicate(all);
 }
 
-async function searchEnterpriseNews() {
+async function searchEnterpriseNews(days = 3) {
   const all = [];
   for (const ent of ENTERPRISES) {
     for (const kw of ent.keywords) {
-      const results = await searchBaidu(kw);
+      const results = await searchBaidu(kw, days);
       all.push(...results.map((r) => ({ ...r, enterprise: ent.name })));
     }
   }
@@ -282,25 +297,28 @@ function categorizeDaily(item) {
   return "行业要闻精选";
 }
 
-async function generateDailyReport(query) {
+async function generateDailyReport(query, days = 3) {
   let [policyNews, industryNews, enterpriseNews] = await Promise.all([
-    searchPolicyNews(),
-    searchIndustryNews(),
-    searchEnterpriseNews(),
+    searchPolicyNews(days),
+    searchIndustryNews(days),
+    searchEnterpriseNews(days),
   ]);
 
-  // 如果用户输入了关键词，额外搜索一次
+  // 如果用户输入了关键词，额外搜索一次（同样限制时间范围）
   if (query && query.trim()) {
-    const extra = await searchBaidu(query.trim());
+    const extra = await searchBaidu(query.trim(), days);
     industryNews.push(...extra);
   }
 
   let all = [...policyNews, ...industryNews, ...enterpriseNews];
 
-  // 去重 + 按质量排序 + 限制10条
+  // 按日期二次过滤，确保只保留近N天的新闻
+  all = filterByDate(all, days);
+
+  // 去重 + 按质量排序 + 限制15条
   all = deduplicate(all);
   all = sortByQuality(all);
-  all = all.slice(0, 10);
+  all = all.slice(0, 15);
 
   all.forEach((item) => {
     item.category = categorizeDaily(item);

@@ -5,20 +5,320 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>竞品动态 - 优码智库AI搜索站</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .competitor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .competitor-item {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+    }
+    .competitor-item:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .competitor-item.selected {
+      background: rgba(102, 126, 234, 0.2);
+      border-color: rgba(102, 126, 234, 0.5);
+      color: #fff;
+    }
+    .competitor-item input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #667eea;
+      cursor: pointer;
+    }
+    .competitor-actions {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      align-items: center;
+    }
+    .competitor-actions button {
+      padding: 12px 28px;
+      border: none;
+      border-radius: 40px;
+      background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .competitor-actions button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+    }
+    .competitor-actions button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .competitor-actions .hint {
+      color: rgba(255,255,255,0.4);
+      font-size: 13px;
+    }
+    .cat-tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+    .cat-产品发布 { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .cat-重大合同 { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .cat-战略合作 { background: rgba(139, 92, 246, 0.2); color: #a78bfa; }
+    .cat-融资 { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .cat-上市 { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .cat-高管变动 { background: rgba(236, 72, 153, 0.2); color: #f472b6; }
+    .cat-招标动态 { background: rgba(20, 184, 166, 0.2); color: #2dd4bf; }
+    .cat-企业动态 { background: rgba(107, 114, 128, 0.2); color: #9ca3af; }
+    .competitor-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      background: rgba(102, 126, 234, 0.15);
+      color: #a5b4fc;
+      margin-right: 8px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <div class="back-nav">
       <a href="/">← 返回首页</a>
+      <span id="pageDate" class="date"></span>
     </div>
 
-    <div class="dev-container">
-      <h2>🏢</h2>
-      <h2 style="font-size: 32px; color: rgba(255,255,255,0.8); margin-bottom: 16px;">竞品动态</h2>
-      <p>头部房企/物企数字化转型、产品发布、市场策略跟踪分析</p>
-      <p style="font-size: 14px; color: rgba(255,255,255,0.3); margin-top: 8px;">功能开发中，敬请期待...</p>
-      <a href="/" style="margin-top: 30px;">返回首页</a>
+    <header class="header" style="margin-bottom: 24px;">
+      <h1 style="font-size: 30px;">🏢 竞品动态</h1>
+      <p>追踪地产/物业数字化领域头部企业的近7天动态：产品发布、重大合同、战略合作、融资、上市、高管变动及招标信息</p>
+    </header>
+
+    <h3 style="color: rgba(255,255,255,0.7); font-size: 16px; margin-bottom: 12px;">选择竞品公司（可多选）</h3>
+    <div id="competitorGrid" class="competitor-grid"></div>
+
+    <div class="competitor-actions">
+      <button id="generateBtn">🚀 一键生成竞品动态</button>
+      <span class="hint">默认搜索近7天动态，未选择则全部搜索</span>
     </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>正在追踪竞品企业动态，请稍候...</p>
+    </div>
+
+    <div id="results" class="results hidden">
+      <div class="stats-bar" id="statsBar"></div>
+
+      <div class="category-tabs" id="categoryTabs">
+        <button class="tab-btn active" data-cat="all">全部</button>
+        <button class="tab-btn" data-cat="产品发布">产品发布</button>
+        <button class="tab-btn" data-cat="重大合同">重大合同</button>
+        <button class="tab-btn" data-cat="战略合作">战略合作</button>
+        <button class="tab-btn" data-cat="融资">融资</button>
+        <button class="tab-btn" data-cat="上市">上市</button>
+        <button class="tab-btn" data-cat="高管变动">高管变动</button>
+        <button class="tab-btn" data-cat="招标动态">招标动态</button>
+      </div>
+
+      <div id="newsList" class="news-list"></div>
+    </div>
+
+    <div id="error" class="error hidden"></div>
   </div>
+
+  <script>
+    document.getElementById("pageDate").textContent = new Date().toLocaleDateString("zh-CN", {
+      year: "numeric", month: "long", day: "numeric"
+    });
+
+    const COMPETITORS = [
+      "明源云", "四格互联", "一碑科技", "极致科技", "金蝶我家云",
+      "有赞", "微盟", "万物云", "高新兴", "海康威视",
+      "华为", "物联云仓", "用友政务", "天翼智慧家庭"
+    ];
+
+    const grid = document.getElementById("competitorGrid");
+    const selected = new Set();
+
+    COMPETITORS.forEach((name) => {
+      const item = document.createElement("label");
+      item.className = "competitor-item";
+      item.innerHTML = `
+        <input type="checkbox" value="${name}" />
+        <span>${name}</span>
+      `;
+      item.addEventListener("click", (e) => {
+        if (e.target.tagName === "INPUT") {
+          const cb = e.target;
+          if (cb.checked) {
+            selected.add(cb.value);
+            item.classList.add("selected");
+          } else {
+            selected.delete(cb.value);
+            item.classList.remove("selected");
+          }
+        }
+      });
+      grid.appendChild(item);
+    });
+
+    const generateBtn = document.getElementById("generateBtn");
+    const loading = document.getElementById("loading");
+    const results = document.getElementById("results");
+    const error = document.getElementById("error");
+    const statsBar = document.getElementById("statsBar");
+    const newsList = document.getElementById("newsList");
+    const categoryTabs = document.getElementById("categoryTabs");
+
+    let currentData = null;
+    let activeCategory = "all";
+
+    generateBtn.addEventListener("click", doGenerate);
+
+    categoryTabs.addEventListener("click", (e) => {
+      if (e.target.classList.contains("tab-btn")) {
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        e.target.classList.add("active");
+        activeCategory = e.target.dataset.cat;
+        renderNewsList();
+      }
+    });
+
+    async function doGenerate() {
+      generateBtn.disabled = true;
+      generateBtn.textContent = "生成中...";
+      results.classList.add("hidden");
+      error.classList.add("hidden");
+      loading.classList.remove("hidden");
+
+      try {
+        const params = new URLSearchParams();
+        if (selected.size > 0) {
+          params.set("companies", Array.from(selected).join(","));
+        }
+        params.set("days", "7");
+
+        const res = await fetch(`/api/competitor?${params.toString()}`);
+        const data = await res.json();
+
+        loading.classList.add("hidden");
+        generateBtn.disabled = false;
+        generateBtn.textContent = "🚀 一键生成竞品动态";
+
+        if (data.error) {
+          showError(data.error);
+          return;
+        }
+
+        currentData = data;
+        renderResults(data);
+      } catch (err) {
+        loading.classList.add("hidden");
+        generateBtn.disabled = false;
+        generateBtn.textContent = "🚀 一键生成竞品动态";
+        showError(`请求失败: ${err.message}`);
+      }
+    }
+
+    function renderResults(data) {
+      results.classList.remove("hidden");
+
+      const catCounts = [];
+      if (data.categories) {
+        for (const [cat, items] of Object.entries(data.categories)) {
+          if (items.length > 0) {
+            catCounts.push(`${cat}: ${items.length}条`);
+          }
+        }
+      }
+      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条动态</span>` + catCounts.map((c) => `<span>${c}</span>`).join("");
+
+      renderNewsList();
+    }
+
+    function renderNewsList() {
+      if (!currentData) return;
+
+      let items = [];
+      if (activeCategory === "all") {
+        items = currentData.results || [];
+      } else if (currentData.categories && currentData.categories[activeCategory]) {
+        items = currentData.categories[activeCategory];
+      }
+
+      newsList.innerHTML = "";
+
+      if (items.length === 0) {
+        newsList.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:40px;">该分类下暂无动态</p>';
+        return;
+      }
+
+      items.forEach((r) => {
+        const card = document.createElement("a");
+        card.className = "news-card";
+        card.href = r.url;
+        card.target = "_blank";
+        card.rel = "noopener";
+
+        const dateStr = r.pubDate ? formatDate(r.pubDate) : "";
+        const catClass = `cat-${r.category || "企业动态"}`;
+
+        card.innerHTML = `
+          <div class="news-card-header">
+            <h3>
+              <span class="competitor-badge">${escapeHtml(r.competitor || "")}</span>
+              ${escapeHtml(r.title)}
+              <span class="cat-tag ${catClass}">${escapeHtml(r.category || "企业动态")}</span>
+            </h3>
+          </div>
+          <p>${escapeHtml(r.abstract || "")}</p>
+          <div class="news-meta">
+            <span class="source">${escapeHtml(r.source || "未知来源")}</span>
+            ${dateStr ? `<span class="date">📅 ${dateStr}</span>` : ""}
+          </div>
+        `;
+        newsList.appendChild(card);
+      });
+    }
+
+    function formatDate(isoDate) {
+      try {
+        const d = new Date(isoDate);
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, "0");
+        const day = d.getDate().toString().padStart(2, "0");
+        return `${year}-${month}-${day}`;
+      } catch {
+        return "";
+      }
+    }
+
+    function showError(msg) {
+      error.textContent = msg;
+      error.classList.remove("hidden");
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
 </body>
 </html>

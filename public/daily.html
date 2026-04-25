@@ -21,6 +21,7 @@
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="例如：万科、智慧物业、物业数字化..." />
       <button id="searchBtn">🔍 搜索</button>
+      <button id="dailyBtn" class="btn-daily">📋 一键生成日报</button>
     </div>
 
     <div id="loading" class="loading hidden">
@@ -56,6 +57,7 @@
 
     const searchInput = document.getElementById("searchInput");
     const searchBtn = document.getElementById("searchBtn");
+    const dailyBtn = document.getElementById("dailyBtn");
     const loading = document.getElementById("loading");
     const results = document.getElementById("results");
     const error = document.getElementById("error");
@@ -70,6 +72,13 @@
     searchInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") doSearch();
     });
+
+    if (dailyBtn) {
+      dailyBtn.addEventListener("click", () => {
+        searchInput.value = "";
+        doSearch();
+      });
+    }
 
     categoryTabs.addEventListener("click", (e) => {
       if (e.target.classList.contains("tab-btn")) {

@@ -1,5 +1,6 @@
 const searchInput = document.getElementById("searchInput");
 const searchBtn = document.getElementById("searchBtn");
+const dailyBtn = document.getElementById("dailyBtn");
 const loading = document.getElementById("loading");
 const results = document.getElementById("results");
 const error = document.getElementById("error");
@@ -16,6 +17,10 @@ searchBtn.addEventListener("click", doSearch);
 searchInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") doSearch();
 });
+
+if (dailyBtn) {
+  dailyBtn.addEventListener("click", doDaily);
+}
 
 categoryTabs.addEventListener("click", (e) => {
   if (e.target.classList.contains("tab-btn")) {
@@ -163,4 +168,35 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+async function doDaily() {
+  if (!dailyBtn) return;
+  dailyBtn.disabled = true;
+  dailyBtn.textContent = "📋 生成中...";
+  results.classList.add("hidden");
+  error.classList.add("hidden");
+  loading.classList.remove("hidden");
+
+  try {
+    const res = await fetch("/api/daily");
+    const data = await res.json();
+
+    loading.classList.add("hidden");
+    dailyBtn.disabled = false;
+    dailyBtn.textContent = "📋 一键生成日报";
+
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+
+    currentData = data;
+    renderResults(data);
+  } catch (err) {
+    loading.classList.add("hidden");
+    dailyBtn.disabled = false;
+    dailyBtn.textContent = "📋 一键生成日报";
+    showError(`请求失败: ${err.message}`);
+  }
 }
