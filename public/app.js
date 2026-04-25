@@ -55,6 +55,7 @@ async function doSearch() {
     }
 
     currentData = data;
+    resetCategory();
     renderResults(data);
   } catch (err) {
     loading.classList.add("hidden");
@@ -64,10 +65,16 @@ async function doSearch() {
   }
 }
 
+function resetCategory() {
+  activeCategory = "all";
+  document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+  const allTab = document.querySelector('.tab-btn[data-cat="all"]');
+  if (allTab) allTab.classList.add("active");
+}
+
 function renderResults(data) {
   results.classList.remove("hidden");
 
-  // 统计栏
   const catCounts = [];
   if (data.categories) {
     for (const [cat, items] of Object.entries(data.categories)) {
@@ -78,14 +85,12 @@ function renderResults(data) {
   }
   statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${c}</span>`).join("");
 
-  // AI 摘要
   if (data.summary) {
     summaryContent.textContent = data.summary;
   } else {
     summaryContent.textContent = "暂无 AI 分析结果。";
   }
 
-  // 关键要点
   if (data.highlights && data.highlights.length > 0) {
     const ul = document.createElement("ul");
     data.highlights.forEach((h) => {
@@ -101,7 +106,6 @@ function renderResults(data) {
     highlightsContent.innerHTML = '<h3>📌 关键要点</h3><p style="color:#999;">暂无要点</p>';
   }
 
-  // 新闻列表
   renderNewsList();
 }
 
@@ -148,8 +152,10 @@ function renderNewsList() {
 }
 
 function formatDate(isoDate) {
+  if (!isoDate) return "";
   try {
     const d = new Date(isoDate);
+    if (isNaN(d.getTime())) return "";
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, "0");
     const day = d.getDate().toString().padStart(2, "0");
@@ -179,7 +185,10 @@ async function doDaily() {
   loading.classList.remove("hidden");
 
   try {
-    const res = await fetch("/api/daily");
+    // 城市更新页面调用 /api/city-daily，其他调用 /api/daily
+    const isCityPage = document.title.includes("城市更新");
+    const apiUrl = isCityPage ? "/api/city-daily" : "/api/daily";
+    const res = await fetch(apiUrl);
     const data = await res.json();
 
     loading.classList.add("hidden");
@@ -192,6 +201,7 @@ async function doDaily() {
     }
 
     currentData = data;
+    resetCategory();
     renderResults(data);
   } catch (err) {
     loading.classList.add("hidden");
@@ -199,4 +209,38 @@ async function doDaily() {
     dailyBtn.textContent = "📋 一键生成日报";
     showError(`请求失败: ${err.message}`);
   }
+}
+
+// 复制日报功能
+function copyDailyContent() {
+  if (!currentData || !currentData.results) {
+    alert("请先生成日报");
+    return;
+  }
+
+  const dateStr = new Date().toLocaleDateString("zh-CN");
+  const title = document.title.includes("城市更新") ? "城市更新日报" : "行业日报";
+  let text = `${title} (${dateStr})\n\n`;
+
+  const items = currentData.results || [];
+  items.forEach((r, i) => {
+    const date = r.pubDate ? formatDate(r.pubDate) : "";
+    text += `${i + 1}. [${r.category || "新闻"}] ${r.title}\n`;
+    if (r.abstract) text += `   ${r.abstract}\n`;
+    if (r.source) text += `   来源: ${r.source}`;
+    if (date) text += ` | ${date}`;
+    text += `\n   链接: ${r.url}\n\n`;
+  });
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert("日报内容已复制到剪贴板");
+  }).catch(() => {
+    alert("复制失败，请手动复制");
+  });
+}
+
+// 绑定复制按钮
+const copyBtn = document.getElementById("copyBtn");
+if (copyBtn) {
+  copyBtn.addEventListener("click", copyDailyContent);
 }

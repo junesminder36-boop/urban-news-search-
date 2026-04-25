@@ -3,7 +3,7 @@ const router = express.Router();
 const { searchAll } = require("../services/search");
 const { batchFetch } = require("../services/crawler");
 const { summarizeNews } = require("../services/aiSummary");
-const { generateDailyReport } = require("../services/dailySearch");
+const { generateDailyReport, generateCityDailyReport } = require("../services/dailySearch");
 const { generateCompetitorReport } = require("../services/competitorSearch");
 const { generateInsights } = require("../services/dailyInsights");
 const { ENTERPRISES } = require("../services/dailySearch");
@@ -89,6 +89,17 @@ function generateAbstract(item) {
   if (title.length <= 20) return title;
   return title.slice(0, 20) + "...";
 }
+
+router.get("/city-daily", async (req, res) => {
+  try {
+    const { q } = req.query;
+    const report = await generateCityDailyReport(q);
+    res.json(report);
+  } catch (err) {
+    console.error("城市更新日报接口错误:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 router.get("/competitor", async (req, res) => {
   try {

@@ -30,7 +30,10 @@
     </div>
 
     <div id="results" class="results hidden">
-      <div class="stats-bar" id="statsBar"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div class="stats-bar" id="statsBar" style="margin-bottom:0;flex:1;"></div>
+        <button id="copyBtn" class="btn-daily" style="margin-left:12px;padding:8px 18px;font-size:13px;">📋 复制日报</button>
+      </div>
 
       <div class="section-card insight-card">
         <h2>💡 优码今日洞察</h2>
@@ -124,8 +127,15 @@
       }
     }
 
+    function resetCategory() {
+      activeCategory = "all";
+      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+      document.querySelector('.tab-btn[data-cat="all"]').classList.add("active");
+    }
+
     function renderResults(data) {
       results.classList.remove("hidden");
+      resetCategory();
 
       const catCounts = [];
       if (data.categories) {
@@ -226,6 +236,30 @@
       return div.innerHTML;
     }
 
+    function copyDailyContent() {
+      if (!currentData || !currentData.results) {
+        alert("请先生成日报");
+        return;
+      }
+      const dateStr = new Date().toLocaleDateString("zh-CN");
+      let text = `今日行业日报 (${dateStr})\n\n`;
+      const items = currentData.results || [];
+      items.forEach((r, i) => {
+        const date = r.pubDate ? formatDate(r.pubDate) : "";
+        text += `${i + 1}. [${r.category || "新闻"}] ${r.title}\n`;
+        if (r.abstract) text += `   ${r.abstract}\n`;
+        if (r.source) text += `   来源: ${r.source}`;
+        if (date) text += ` | ${date}`;
+        text += `\n   链接: ${r.url}\n\n`;
+      });
+      navigator.clipboard.writeText(text).then(() => {
+        alert("日报内容已复制到剪贴板");
+      }).catch(() => {
+        alert("复制失败，请手动复制");
+      });
+    }
+
+    document.getElementById("copyBtn").addEventListener("click", copyDailyContent);
   </script>
 </body>
 </html>
