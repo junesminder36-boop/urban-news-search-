@@ -13,15 +13,17 @@
       <span id="dailyDate" class="date"></span>
     </div>
 
-    <header class="header" style="margin-bottom: 30px;">
-      <h1 style="font-size: 32px;">📋 今日行业日报</h1>
+    <header class="header page-header">
+      <h1 class="page-title">📋 今日行业日报</h1>
       <p>不动产行业每日精选：地产 · 物业 · 园区 · 医院</p>
     </header>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="例如：万科、智慧物业、物业数字化..." />
-      <button id="searchBtn">🔍 搜索</button>
-      <button id="dailyBtn" class="btn-daily">📋 一键生成日报</button>
+      <div class="search-actions">
+        <button id="searchBtn">🔍 搜索</button>
+        <button id="dailyBtn" class="btn-daily">📋 一键生成日报</button>
+      </div>
     </div>
 
     <div id="loading" class="loading hidden">
@@ -30,9 +32,9 @@
     </div>
 
     <div id="results" class="results hidden">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <div class="stats-bar" id="statsBar" style="margin-bottom:0;flex:1;"></div>
-        <button id="copyBtn" class="btn-daily" style="margin-left:12px;padding:8px 18px;font-size:13px;">📋 复制日报</button>
+      <div class="stats-bar-wrap">
+        <div class="stats-bar" id="statsBar" style="flex:1;margin-bottom:0;"></div>
+        <button id="copyBtn" class="btn-daily stats-copy-btn">📋 复制日报</button>
       </div>
 
       <div class="section-card insight-card">

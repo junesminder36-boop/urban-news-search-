@@ -95,6 +95,34 @@
       color: #a5b4fc;
       margin-right: 8px;
     }
+    @media (max-width: 768px) {
+      .competitor-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+      .competitor-item {
+        padding: 12px;
+        font-size: 13px;
+      }
+      .competitor-actions {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .competitor-actions button {
+        width: 100%;
+        padding: 12px;
+      }
+      .competitor-actions .hint {
+        font-size: 12px;
+        text-align: center;
+      }
+    }
+    @media (max-width: 480px) {
+      .competitor-grid {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -104,8 +132,8 @@
       <span id="pageDate" class="date"></span>
     </div>
 
-    <header class="header" style="margin-bottom: 24px;">
-      <h1 style="font-size: 30px;">🏢 竞品动态</h1>
+    <header class="header page-header">
+      <h1 class="page-title">🏢 竞品动态</h1>
       <p>追踪地产/物业数字化领域头部企业的近7天动态：产品发布、重大合同、战略合作、融资、上市、高管变动及招标信息</p>
     </header>
 

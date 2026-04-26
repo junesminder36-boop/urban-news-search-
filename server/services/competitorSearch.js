@@ -1,6 +1,93 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 
+function isValidResult(item) {
+  const title = item.title || "";
+  const url = item.link || "";
+  const lowerTitle = title.toLowerCase();
+  const lowerUrl = url.toLowerCase();
+
+  if (title.length < 10) return false;
+
+  const baiduTrash = [
+    "baike.baidu", "zhidao.baidu", "wenku.baidu", "jingyan.baidu",
+    "tieba.baidu", "v.baidu", "haokan.baidu", "map.baidu",
+  ];
+  if (baiduTrash.some((d) => lowerUrl.includes(d))) return false;
+  if (/百度(百科|知道|文库|经验)/.test(title)) return false;
+
+  const forumDomains = [
+    "bbs.", "forum.", "club.", "zhihu.com/question", "jianshu.com",
+    "csdn.net", "blog.csdn", "cnblogs.com", "weibo.com", "douyin.com",
+    "bilibili.com", "xiaohongshu.com", "kuaishou.com",
+  ];
+  if (forumDomains.some((d) => lowerUrl.includes(d))) return false;
+
+  const officialPatterns = ["官网", "首页", "欢迎您", "welcome", "官方网站", "进入官网", "官网入口", "主页"];
+  if (officialPatterns.some((k) => lowerTitle.includes(k))) return false;
+
+  const adKeywords = [
+    "招聘", "诚聘", "薪资", "加盟", "代理", "厂家", "批发", "价格", "多少钱",
+    "怎么样", "好不好", "推荐", "排行榜", "十大", "电话", "地址",
+    "官方旗舰店", "优惠券", "秒杀", "限时", "免费领", "点击领取",
+    "诚招", "急聘", "高薪", "待遇", "五险一金", "双休",
+    "广告", "推广", "培训", "课程", "试听", "报名", "名额有限",
+  ];
+  if (adKeywords.some((k) => lowerTitle.includes(k))) return false;
+
+  const mediaDomains = [
+    "video.", "v.qq.com", "youku.com", "iqiyi.com", "mgtv.com",
+    "pan.baidu.com", "xunlei.com", "down.", "download.",
+  ];
+  if (mediaDomains.some((d) => lowerUrl.includes(d))) return false;
+
+  const holidayKeywords = ["放假", "假期", "调休", "节假日", "年假", "五一", "国庆", "春节放假"];
+  if (holidayKeywords.some((k) => lowerTitle.includes(k))) return false;
+
+  if (/^\d+$/.test(title.replace(/\s/g, ""))) return false;
+
+  const questionPatterns = [/^什么是/, /^怎么/, /^如何/, /^为什么/, /\?$/];
+  if (questionPatterns.some((p) => p.test(title))) return false;
+
+  return true;
+}
+
+async function resolveBaiduLink(baiduUrl) {
+  try {
+    const res = await axios.get(baiduUrl, {
+      maxRedirects: 5,
+      timeout: 10000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+    });
+    return res.request?.res?.responseUrl || res.config?.url || baiduUrl;
+  } catch (err) {
+    if (err.response) {
+      const loc = err.response.headers && err.response.headers.location;
+      if (loc) return loc;
+      const html = err.response.data || "";
+      const metaMatch = html.match(/http-equiv=["']refresh["'][^>]*url=([^"']+)/i);
+      if (metaMatch) return metaMatch[1];
+      const jsMatch = html.match(/URL=['"]([^'"]+)['"]/);
+      if (jsMatch) return jsMatch[1];
+      const windowLoc = html.match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
+      if (windowLoc) return windowLoc[1];
+    }
+    return baiduUrl;
+  }
+}
+
+function extractSourceFromUrl(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 // 竞品公司列表
 const COMPETITORS = [
   { name: "明源云", keywords: ["明源云", "明源云 产品", "明源云 合作", "明源云 中标"] },
@@ -73,11 +160,93 @@ async function searchBaidu(keyword, days = 7) {
       }
     });
 
-    return results.slice(0, 5);
+    const resolved = await Promise.all(
+      results.map(async (r) => {
+        const realUrl = await resolveBaiduLink(r.link);
+        const realSource = extractSourceFromUrl(realUrl);
+        return { ...r, link: realUrl, source: realSource || r.source };
+      })
+    );
+
+    return resolved.filter(isValidResult).slice(0, 5);
   } catch (err) {
     console.error("百度搜索失败:", err.message);
     return [];
   }
+}
+
+async function searchSogou(keyword, days = 7) {
+  try {
+    const tsn = days <= 1 ? 1 : days <= 7 ? 2 : 3;
+    const url = `https://www.sogou.com/web?query=${encodeURIComponent(keyword)}&tsn=${tsn}`;
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+      },
+      timeout: 10000,
+    });
+    const $ = cheerio.load(res.data);
+    const results = [];
+    $(".vrwrap, .rb").each((_, el) => {
+      const titleEl = $(el).find("h3 a").first();
+      const title = titleEl.text().trim();
+      const link = titleEl.attr("href");
+      const abstract = $(el).find(".str-text, .rb-text").text().trim();
+      if (title && link) {
+        results.push({ title, link, abstract: abstract || "", source: "", pubDate: new Date().toISOString() });
+      }
+    });
+    return results.filter(isValidResult).slice(0, 5);
+  } catch (err) {
+    console.error("搜狗搜索失败:", err.message);
+    return [];
+  }
+}
+
+async function searchBing(keyword, days = 7) {
+  try {
+    const filters = days <= 1 ? "ex1%3a%22ez1%22" : "ex1%3a%22ez5%22";
+    const url = `https://cn.bing.com/search?q=${encodeURIComponent(keyword)}&filters=${filters}&count=10`;
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+      },
+      timeout: 10000,
+    });
+    const $ = cheerio.load(res.data);
+    const results = [];
+    $(".b_algo").each((_, el) => {
+      const titleEl = $(el).find("h2 a").first();
+      const title = titleEl.text().trim();
+      const link = titleEl.attr("href");
+      const abstract = $(el).find(".b_caption p").text().trim();
+      if (title && link) {
+        results.push({ title, link, abstract: abstract || "", source: "", pubDate: new Date().toISOString() });
+      }
+    });
+    return results.filter(isValidResult).slice(0, 5);
+  } catch (err) {
+    console.error("Bing搜索失败:", err.message);
+    return [];
+  }
+}
+
+async function searchAllEngines(keyword, days = 7) {
+  const [baidu, sogou, bing] = await Promise.all([
+    searchBaidu(keyword, days).catch(() => []),
+    searchSogou(keyword, days).catch(() => []),
+    searchBing(keyword, days).catch(() => []),
+  ]);
+  const all = [...baidu, ...sogou, ...bing];
+  const seen = new Set();
+  return all.filter((item) => {
+    const key = item.title.slice(0, 30);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 6);
 }
 
 function parseDate(dateText) {
@@ -135,7 +304,7 @@ async function searchCompetitorNews(competitors, days = 7) {
   const all = [];
   for (const comp of competitors) {
     for (const kw of comp.keywords) {
-      const results = await searchBaidu(kw, days);
+      const results = await searchAllEngines(kw, days);
       for (const r of results) {
         all.push({ ...r, competitor: comp.name });
       }

@@ -3,6 +3,93 @@ const cheerio = require("cheerio");
 const { fetchRSSFeeds } = require("./rssFeeds");
 const { crawlTargetedSites } = require("./targetedCrawler");
 
+function isValidResult(item) {
+  const title = item.title || "";
+  const url = item.link || "";
+  const lowerTitle = title.toLowerCase();
+  const lowerUrl = url.toLowerCase();
+
+  if (title.length < 10) return false;
+
+  const baiduTrash = [
+    "baike.baidu", "zhidao.baidu", "wenku.baidu", "jingyan.baidu",
+    "tieba.baidu", "v.baidu", "haokan.baidu", "map.baidu",
+  ];
+  if (baiduTrash.some((d) => lowerUrl.includes(d))) return false;
+  if (/百度(百科|知道|文库|经验)/.test(title)) return false;
+
+  const forumDomains = [
+    "bbs.", "forum.", "club.", "zhihu.com/question", "jianshu.com",
+    "csdn.net", "blog.csdn", "cnblogs.com", "weibo.com", "douyin.com",
+    "bilibili.com", "xiaohongshu.com", "kuaishou.com",
+  ];
+  if (forumDomains.some((d) => lowerUrl.includes(d))) return false;
+
+  const officialPatterns = ["官网", "首页", "欢迎您", "welcome", "官方网站", "进入官网", "官网入口", "主页"];
+  if (officialPatterns.some((k) => lowerTitle.includes(k))) return false;
+
+  const adKeywords = [
+    "招聘", "诚聘", "薪资", "加盟", "代理", "厂家", "批发", "价格", "多少钱",
+    "怎么样", "好不好", "推荐", "排行榜", "十大", "电话", "地址",
+    "官方旗舰店", "优惠券", "秒杀", "限时", "免费领", "点击领取",
+    "诚招", "急聘", "高薪", "待遇", "五险一金", "双休",
+    "广告", "推广", "培训", "课程", "试听", "报名", "名额有限",
+  ];
+  if (adKeywords.some((k) => lowerTitle.includes(k))) return false;
+
+  const mediaDomains = [
+    "video.", "v.qq.com", "youku.com", "iqiyi.com", "mgtv.com",
+    "pan.baidu.com", "xunlei.com", "down.", "download.",
+  ];
+  if (mediaDomains.some((d) => lowerUrl.includes(d))) return false;
+
+  const holidayKeywords = ["放假", "假期", "调休", "节假日", "年假", "五一", "国庆", "春节放假"];
+  if (holidayKeywords.some((k) => lowerTitle.includes(k))) return false;
+
+  if (/^\d+$/.test(title.replace(/\s/g, ""))) return false;
+
+  const questionPatterns = [/^什么是/, /^怎么/, /^如何/, /^为什么/, /\?$/];
+  if (questionPatterns.some((p) => p.test(title))) return false;
+
+  return true;
+}
+
+async function resolveBaiduLink(baiduUrl) {
+  try {
+    const res = await axios.get(baiduUrl, {
+      maxRedirects: 5,
+      timeout: 10000,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml",
+      },
+    });
+    return res.request?.res?.responseUrl || res.config?.url || baiduUrl;
+  } catch (err) {
+    if (err.response) {
+      const loc = err.response.headers && err.response.headers.location;
+      if (loc) return loc;
+      const html = err.response.data || "";
+      const metaMatch = html.match(/http-equiv=["']refresh["'][^>]*url=([^"']+)/i);
+      if (metaMatch) return metaMatch[1];
+      const jsMatch = html.match(/URL=['"]([^'"]+)['"]/);
+      if (jsMatch) return jsMatch[1];
+      const windowLoc = html.match(/window\.location\.href\s*=\s*["']([^"']+)["']/);
+      if (windowLoc) return windowLoc[1];
+    }
+    return baiduUrl;
+  }
+}
+
+function extractSourceFromUrl(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
+
 async function searchBaiduNews(keyword) {
   try {
     const url = `https://www.baidu.com/s?wd=${encodeURIComponent(keyword + " 新闻")}&tn=news&rtt=4`;
@@ -46,9 +133,73 @@ async function searchBaiduNews(keyword) {
       }
     });
 
-    return results.slice(0, 10);
+    const resolved = await Promise.all(
+      results.map(async (r) => {
+        const realUrl = await resolveBaiduLink(r.link);
+        const realSource = extractSourceFromUrl(realUrl);
+        return { ...r, link: realUrl, source: realSource || r.source };
+      })
+    );
+
+    return resolved.filter(isValidResult).slice(0, 8);
   } catch (err) {
     console.error("百度新闻搜索失败:", err.message);
+    return [];
+  }
+}
+
+async function searchSogouNews(keyword) {
+  try {
+    const url = `https://www.sogou.com/web?query=${encodeURIComponent(keyword + " 新闻")}&tsn=2`;
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+      },
+      timeout: 10000,
+    });
+    const $ = cheerio.load(res.data);
+    const results = [];
+    $(".vrwrap, .rb").each((_, el) => {
+      const titleEl = $(el).find("h3 a").first();
+      const title = titleEl.text().trim();
+      const link = titleEl.attr("href");
+      const abstract = $(el).find(".str-text, .rb-text").text().trim();
+      if (title && link) {
+        results.push({ title, link, abstract: abstract || "", source: "", pubDate: new Date().toISOString() });
+      }
+    });
+    return results.filter(isValidResult).slice(0, 8);
+  } catch (err) {
+    console.error("搜狗新闻搜索失败:", err.message);
+    return [];
+  }
+}
+
+async function searchBingNews(keyword) {
+  try {
+    const url = `https://cn.bing.com/search?q=${encodeURIComponent(keyword + " 新闻")}&filters=ex1%3a%22ez5%22&count=10`;
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9",
+      },
+      timeout: 10000,
+    });
+    const $ = cheerio.load(res.data);
+    const results = [];
+    $(".b_algo").each((_, el) => {
+      const titleEl = $(el).find("h2 a").first();
+      const title = titleEl.text().trim();
+      const link = titleEl.attr("href");
+      const abstract = $(el).find(".b_caption p").text().trim();
+      if (title && link) {
+        results.push({ title, link, abstract: abstract || "", source: "", pubDate: new Date().toISOString() });
+      }
+    });
+    return results.filter(isValidResult).slice(0, 8);
+  } catch (err) {
+    console.error("Bing新闻搜索失败:", err.message);
     return [];
   }
 }
@@ -108,14 +259,16 @@ async function searchAll(keyword) {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const [rssResults, targetedResults, baiduResults] = await Promise.all([
+  const [rssResults, targetedResults, baiduResults, sogouResults, bingResults] = await Promise.all([
     fetchRSSFeeds(keyword).catch((e) => { console.error("RSS失败:", e.message); return []; }),
     crawlTargetedSites(keyword).catch((e) => { console.error("定向爬取失败:", e.message); return []; }),
     searchBaiduNews(keyword).catch((e) => { console.error("百度新闻失败:", e.message); return []; }),
+    searchSogouNews(keyword).catch((e) => { console.error("搜狗新闻失败:", e.message); return []; }),
+    searchBingNews(keyword).catch((e) => { console.error("Bing新闻失败:", e.message); return []; }),
   ]);
 
   // 合并所有来源
-  const all = [...rssResults, ...targetedResults, ...baiduResults];
+  const all = [...rssResults, ...targetedResults, ...baiduResults, ...sogouResults, ...bingResults];
 
   // 去重（基于标题相似度）
   const seen = new Set();
