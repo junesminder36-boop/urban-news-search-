@@ -799,7 +799,14 @@ function generateCityDailyMarkdown(results, dateStr) {
     newsBody += `\n━━━━━━━━━━━━━━━\n\n## ${sec.title}\n\n`;
     sec.items.forEach((r) => {
       const pub = r.pubDate ? formatIsoDate(r.pubDate) : dateStr;
-      newsBody += `**${idx}. ${r.title}**\n${r.abstract || r.title}\n> 发布时间：${pub} ｜ 来源：${r.source || "网络"}\n> [点击查看原文](${r.url})\n\n`;
+      const abs = (r.abstract || "").trim();
+      const hasRealAbstract = abs && abs !== r.title.trim() && !r.title.includes(abs.slice(0, 12));
+
+      newsBody += `**${idx}. ${r.title}**`;
+      if (hasRealAbstract) {
+        newsBody += `\n${abs}`;
+      }
+      newsBody += `\n> 发布时间：${pub} ｜ 来源：${r.source || "网络"}\n> [点击查看原文](${r.url})\n\n`;
       idx++;
     });
   });
