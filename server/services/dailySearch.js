@@ -545,10 +545,9 @@ function categorizeCityDaily(item) {
 function formatAbstract(item) {
   if (item.abstract && item.abstract.trim().length > 0) {
     const abs = item.abstract.trim();
-    return abs.slice(0, 35) + (abs.length > 35 ? "..." : "");
+    return abs.slice(0, 100) + (abs.length > 100 ? "..." : "");
   }
-  const title = item.title || "";
-  return title.slice(0, 30) + (title.length > 30 ? "..." : "");
+  return "";
 }
 
 // ========== 生成行业日报 ==========
@@ -749,7 +748,7 @@ function generateCityDailyMarkdown(results, dateStr) {
   if (!results || results.length === 0) return "暂无新闻素材。";
 
   const d = new Date(dateStr);
-  const dateCn = `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, "0")}月${String(d.getDate()).padStart(2, "0")}日`;
+  const dateCn = `${d.getFullYear()} 年 ${String(d.getMonth() + 1).padStart(2, "0")} 月 ${String(d.getDate()).padStart(2, "0")} 日`;
 
   const endDate = dateStr;
   const startD = new Date(d);
@@ -784,12 +783,12 @@ function generateCityDailyMarkdown(results, dateStr) {
   }
 
   const sections = [
-    { title: "政策动态", items: central },
-    { title: "地方政策动态", items: local },
-    { title: "地方实践案例", items: practice },
-    { title: "项目实践", items: project },
-    { title: "行业观点", items: opinion },
-    { title: "技术创新｜数字化、智慧化应用", items: digital },
+    { title: "📜 政策动态", items: central },
+    { title: "🏛 地方政策动态", items: local },
+    { title: "🌆 地方实践案例", items: practice },
+    { title: "🏗 项目实践", items: project },
+    { title: "💡 行业观点", items: opinion },
+    { title: "🚀 技术创新｜数字化、智慧化应用", items: digital },
   ];
 
   let newsBody = "";
@@ -806,7 +805,7 @@ function generateCityDailyMarkdown(results, dateStr) {
       if (hasRealAbstract) {
         newsBody += `\n${abs}`;
       }
-      newsBody += `\n> 发布时间：${pub} ｜ 来源：${r.source || "网络"}\n> [点击查看原文](${r.url})\n\n`;
+      newsBody += `\n> 📅 发布时间：${pub} ｜ 📰 来源：${r.source || "网络"}\n> 🔗 [点击查看原文](${r.url})\n\n`;
       idx++;
     });
   });
@@ -815,7 +814,7 @@ function generateCityDailyMarkdown(results, dateStr) {
   const focus = firstNews ? firstNews.title.slice(0, 20) : "城市更新持续推进";
   const summary = results.slice(0, 3).map((r) => r.title).join("；").slice(0, 70);
 
-  return `# 今日城市更新日报\n\n> **日期**　${dateCn}\n> **生成时间**　08:00:00\n> **新闻窗口**　${startDate} ~ ${endDate}（严格近 3 日）\n> **新闻总数**　${allSelected.length} 条\n> **今日聚焦**　<font color="info">${focus}</font>\n${newsBody}\n━━━━━━━━━━━━━━━\n\n## 今日一句话总结\n> <font color="comment">${summary}...</font>\n\n━━━━━━━━━━━━━━━\n\n**日报内容由优码数智库生成** ｜ 发布日期：${dateStr}\n[优码AI · 让组织能力可视化](https://youmatech.com/ai)`;
+  return `# 🏙️ 今日城市更新日报\n\n> 📅 **日期**　${dateCn}\n> ⏰ **生成时间**　08:00:00\n> 🗓 **新闻窗口**　${startDate} ~ ${endDate}（严格近 3 日）\n> 📰 **新闻总数**　${allSelected.length} 条\n> 🎯 **今日聚焦**　<font color="info">${focus}</font>\n${newsBody}\n━━━━━━━━━━━━━━━\n\n## 📊 今日一句话总结\n> <font color="comment">${summary}...</font>\n\n━━━━━━━━━━━━━━━\n\n📌 **日报内容由优码数智库生成** ｜ 发布日期：${dateStr}\n🔗 [优码AI · 让组织能力可视化](https://www.youmatech.com/youma_ai_website/index.html)`;
 }
 
 module.exports = { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown, ENTERPRISES };
