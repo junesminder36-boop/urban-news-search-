@@ -687,8 +687,9 @@ async function generateCityDailyReport(query, days = 3) {
 
   let all = [...policyNews, ...localNews, ...practiceNews, ...digitalNews];
 
-  // 按日期过滤
-  all = filterByDate(all, days);
+  // 按日期过滤，如果近3天没有结果则保留全部
+  const filtered = filterByDate(all, days);
+  all = filtered.length > 0 ? filtered : all;
 
   // 去重 + 排序 + 限制10-15条
   all = deduplicate(all);
