@@ -187,8 +187,44 @@ async function readApiJson(res) {
   return res.json();
 }
 
-async function doDaily() {
+/* ===== 日报缓存 ===== */
+const CACHE_PREFIX = "youma_daily_";
+
+function getDailyCacheKey() {
+  const today = new Date().toISOString().slice(0, 10);
+  const isCityPage = document.title.includes("城市更新");
+  return `${CACHE_PREFIX}${isCityPage ? "city" : "industry"}_${today}`;
+}
+
+function loadDailyCache() {
+  try {
+    return JSON.parse(localStorage.getItem(getDailyCacheKey()));
+  } catch {
+    return null;
+  }
+}
+
+function saveDailyCache(data) {
+  localStorage.setItem(getDailyCacheKey(), JSON.stringify(data));
+}
+
+function clearDailyCache() {
+  localStorage.removeItem(getDailyCacheKey());
+}
+
+async function doDaily(force = false) {
   if (!dailyBtn) return;
+
+  if (!force) {
+    const cached = loadDailyCache();
+    if (cached && cached.results && cached.results.length > 0) {
+      currentData = cached;
+      resetCategory();
+      renderResults(cached);
+      return;
+    }
+  }
+
   dailyBtn.disabled = true;
   dailyBtn.textContent = "生成中";
   results.classList.add("hidden");
@@ -196,7 +232,6 @@ async function doDaily() {
   loading.classList.remove("hidden");
 
   try {
-    // 城市更新页面调用 /api/city-daily，其他调用 /api/daily
     const isCityPage = document.title.includes("城市更新");
     const apiUrl = isCityPage ? "/api/city-daily" : "/api/daily";
     const res = await fetch(apiUrl);
@@ -212,6 +247,7 @@ async function doDaily() {
     }
 
     currentData = data;
+    saveDailyCache(data);
     resetCategory();
     renderResults(data);
   } catch (err) {
@@ -285,3 +321,22 @@ if (initialQuery && searchInput) {
   searchInput.value = initialQuery;
   doSearch();
 }
+
+/* 刷新按钮 */
+const refreshBtn = document.getElementById("refreshBtn");
+if (refreshBtn) {
+  refreshBtn.addEventListener("click", () => {
+    clearDailyCache();
+    doDaily(true);
+  });
+}
+
+/* 页面加载时自动恢复当日缓存 */
+(function restoreDailyOnLoad() {
+  const cached = loadDailyCache();
+  if (cached && cached.results && cached.results.length > 0) {
+    currentData = cached;
+    resetCategory();
+    renderResults(cached);
+  }
+})();
