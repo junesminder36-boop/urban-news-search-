@@ -48,6 +48,28 @@
       </a>
     </div>
 
+    <!-- 今日重点资讯 -->
+    <div class="section-panel glass-card" id="todaySection">
+      <div class="section-header">
+        <h2>📰 今日重点资讯</h2>
+        <button class="section-toggle" id="todayToggle">查看更多</button>
+      </div>
+      <div class="section-list" id="todayList">
+        <div class="section-loading">
+          <div class="spinner"></div>
+          <p>正在加载今日资讯...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关键词热度 -->
+    <div class="section-panel glass-card" id="wordCloudSection">
+      <div class="section-header">
+        <h2>🔥 关键词热度</h2>
+      </div>
+      <div class="word-cloud" id="wordCloud"></div>
+    </div>
+
     <footer style="text-align: center; padding: 40px; color: rgba(255,255,255,0.25); font-size: 13px;">
       <p>优码智库 · AI 驱动的不动产行业信息聚合平台</p>
     </footer>
@@ -133,6 +155,138 @@
 
     updateLoginBtn();
     checkLogin();
+
+    /* ===== 今日重点资讯 ===== */
+    let todayAll = [];
+    let todayExpanded = false;
+    const todayListEl = document.getElementById('todayList');
+    const todayToggle = document.getElementById('todayToggle');
+
+    async function loadTodayNews() {
+      try {
+        const res = await fetch('/api/city-daily');
+        const data = await res.json();
+        if (data.error || !data.results || data.results.length === 0) {
+          todayListEl.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">暂无今日资讯</p>';
+          todayToggle.style.display = 'none';
+          return;
+        }
+        todayAll = data.results;
+        renderToday();
+      } catch (err) {
+        todayListEl.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">加载失败，请稍后重试</p>';
+        todayToggle.style.display = 'none';
+      }
+    }
+
+    function renderToday() {
+      const limit = todayExpanded ? 10 : 3;
+      const items = todayAll.slice(0, limit);
+      todayListEl.innerHTML = items.map(r => {
+        const catClass = `cat-${r.category || '行业观点'}`;
+        const dateStr = r.pubDate ? formatDate(r.pubDate) : '';
+        return `
+          <a href="${r.url}" target="_blank" rel="noopener" class="section-item">
+            <div class="section-item-main">
+              <span class="section-tag ${catClass}">${escapeHtml(r.category || '资讯')}</span>
+              <h4 class="section-item-title">${escapeHtml(r.title)}</h4>
+              <p class="section-item-abs">${escapeHtml(r.abstract || '')}</p>
+            </div>
+            <div class="section-item-meta">
+              <span>${escapeHtml(r.source || '未知来源')}</span>
+              ${dateStr ? `<span>${dateStr}</span>` : ''}
+            </div>
+          </a>
+        `;
+      }).join('');
+
+      todayToggle.textContent = todayExpanded ? '收起' : '查看更多';
+      todayToggle.style.display = todayAll.length > 3 ? 'inline-block' : 'none';
+    }
+
+    todayToggle.addEventListener('click', () => {
+      todayExpanded = !todayExpanded;
+      renderToday();
+    });
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatDate(iso) {
+      try {
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      } catch { return ''; }
+    }
+
+    /* ===== 关键词热度词云 ===== */
+    const keywords = [
+      { text: '城市更新', weight: 10 },
+      { text: '老旧小区', weight: 7 },
+      { text: '城中村', weight: 8 },
+      { text: '片区更新', weight: 6 },
+      { text: '智慧物业', weight: 7 },
+      { text: '数字化转型', weight: 8 },
+      { text: '产业园区', weight: 5 },
+      { text: '保障房', weight: 6 },
+      { text: '招投标', weight: 7 },
+      { text: '政策法规', weight: 8 },
+      { text: '地产动态', weight: 6 },
+      { text: '物业管理', weight: 5 },
+      { text: '智慧社区', weight: 7 },
+      { text: '碳中和', weight: 4 },
+      { text: 'ESG', weight: 5 },
+      { text: 'REITs', weight: 6 },
+      { text: '存量改造', weight: 7 },
+      { text: '有机更新', weight: 5 },
+      { text: 'TOD', weight: 4 },
+      { text: '海绵城市', weight: 3 },
+      { text: '城市体检', weight: 5 },
+      { text: '完整社区', weight: 4 },
+      { text: '社区营造', weight: 3 },
+      { text: '老旧小区改造', weight: 6 },
+      { text: '历史街区', weight: 4 },
+      { text: '工业遗产', weight: 3 },
+      { text: '微更新', weight: 5 },
+      { text: '装配式', weight: 3 },
+      { text: 'BIM', weight: 4 },
+      { text: 'CIM', weight: 3 },
+      { text: '数字孪生', weight: 5 },
+      { text: '物联感知', weight: 4 }
+    ];
+
+    function renderWordCloud() {
+      const container = document.getElementById('wordCloud');
+      const colors = [
+        'rgba(102,126,234,0.9)',
+        'rgba(168,85,247,0.9)',
+        'rgba(52,211,153,0.9)',
+        'rgba(251,191,36,0.9)',
+        'rgba(236,72,153,0.9)',
+        'rgba(96,165,250,0.9)',
+        'rgba(192,132,252,0.9)',
+        'rgba(248,113,113,0.9)',
+        'rgba(45,212,191,0.9)',
+        'rgba(250,204,21,0.9)'
+      ];
+
+      const shuffled = [...keywords].sort(() => Math.random() - 0.5);
+
+      container.innerHTML = shuffled.map(k => {
+        const size = 12 + k.weight * 2.2;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const opacity = 0.5 + Math.random() * 0.5;
+        const rotate = (Math.random() - 0.5) * 12;
+        return `<span class="word-cloud-item" style="font-size:${size}px;color:${color};opacity:${opacity};transform:rotate(${rotate}deg)">${escapeHtml(k.text)}</span>`;
+      }).join('');
+    }
+
+    loadTodayNews();
+    renderWordCloud();
   </script>
 </body>
 </html>
