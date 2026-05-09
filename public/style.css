@@ -1179,3 +1179,163 @@ body {
     padding: 16px 6px;
   }
 }
+
+/* ===== 首页搜索框 + 横排快捷入口 ===== */
+.home-search-wrap {
+  margin-bottom: 20px;
+}
+
+.home-search-box {
+  display: flex;
+  align-items: center;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 5px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: border-color 0.2s ease;
+}
+
+.home-search-box:focus-within {
+  border-color: rgba(102, 126, 234, 0.3);
+}
+
+.home-search-icon {
+  padding: 0 10px 0 14px;
+  color: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+}
+
+.home-search-box input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #fff;
+  padding: 11px 0;
+  font-size: 14px;
+  outline: none;
+}
+
+.home-search-box input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.home-search-box button {
+  padding: 10px 26px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #667eea, #a855f7);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.home-search-box button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.25);
+}
+
+/* 横排快捷入口 */
+.nav-grid {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.nav-card {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 16px;
+  color: #fff;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.nav-card:hover {
+  transform: translateY(-3px);
+}
+
+.nav-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.nav-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.nav-info h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.nav-info p {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 768px) {
+  .home-search-box {
+    margin: 0 4px;
+  }
+
+  .home-search-box input {
+    font-size: 16px;
+  }
+
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .nav-card {
+    flex-direction: column;
+    padding: 16px;
+    text-align: center;
+    align-items: center;
+  }
+
+  .nav-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .nav-info h3 {
+    font-size: 14px;
+  }
+
+  .nav-info p {
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .nav-grid {
+    gap: 8px;
+  }
+
+  .nav-card {
+    padding: 14px 10px;
+  }
+
+  .nav-icon {
+    font-size: 26px;
+  }
+}
