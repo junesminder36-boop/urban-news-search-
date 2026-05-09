@@ -4,10 +4,10 @@ const API_URL = "https://api.moonshot.cn/v1/chat/completions";
 const API_KEY = process.env.KIMI_API_KEY || "";
 const MODEL = "moonshot-v1-8k";
 
-async function summarizeNews(query, articles) {
+async function summarizeNews(query, articles, customSystemPrompt) {
   if (!API_KEY) {
     return {
-      summary: "⚠️ 未配置 Kimi API Key，请在 .env 文件中设置 KIMI_API_KEY。",
+      summary: "未配置 Kimi API Key，请在 .env 文件中设置 KIMI_API_KEY。",
       highlights: [],
       raw: "",
     };
@@ -18,7 +18,7 @@ async function summarizeNews(query, articles) {
     .map((a, i) => `文章${i + 1}：《${a.title}》\n来源：${a.source || a.url}\n摘要：${(a.content || a.abstract || "").slice(0, 400)}`)
     .join("\n\n---\n\n");
 
-  const systemPrompt = `你是一位城市更新领域的新闻分析师。请根据用户的问题和提供的文章，完成以下任务：
+  const systemPrompt = customSystemPrompt || `你是一位城市更新领域的新闻分析师。请根据用户的问题和提供的文章，完成以下任务：
 1. 撰写一段 200-300 字的综合摘要
 2. 提炼 3-5 条关键要点
 3. 标注每条信息的主要来源

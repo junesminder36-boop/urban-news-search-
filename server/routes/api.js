@@ -3,7 +3,7 @@ const router = express.Router();
 const { searchAll } = require("../services/search");
 const { batchFetch } = require("../services/crawler");
 const { summarizeNews } = require("../services/aiSummary");
-const { generateDailyReport, generateCityDailyReport } = require("../services/dailySearch");
+const { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown } = require("../services/dailySearch");
 const { generateCompetitorReport } = require("../services/competitorSearch");
 const { generateInsights } = require("../services/dailyInsights");
 const { ENTERPRISES } = require("../services/dailySearch");
@@ -94,7 +94,30 @@ router.get("/city-daily", async (req, res) => {
   try {
     const { q } = req.query;
     const report = await generateCityDailyReport(q);
-    res.json(report);
+
+    const cityDailySystemPrompt = `你是一位城市更新领域的新闻分析师。请根据提供的今日新闻素材，完成以下任务：
+1. 撰写一段 80-120 字的综合摘要，凝练当日城市更新领域核心动向
+2. 提炼 3-5 条关键要点，每条一句话
+请用中文回答，格式如下：
+
+【综合摘要】
+...
+
+【关键要点】
+1. ...
+2. ...
+3. ...
+`;
+
+    const aiResult = await summarizeNews("城市更新日报", report.results, cityDailySystemPrompt);
+    const dailyReport = generateCityDailyMarkdown(report.results, report.date);
+
+    res.json({
+      ...report,
+      summary: aiResult.summary,
+      highlights: aiResult.highlights,
+      dailyReport,
+    });
   } catch (err) {
     console.error("城市更新日报接口错误:", err);
     res.status(500).json({ error: err.message });

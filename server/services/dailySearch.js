@@ -580,13 +580,23 @@ async function generateDailyReport(query, days = 3) {
     item.abstract = formatAbstract(item);
   });
 
+  const mapped = all.map((r) => ({
+    title: r.title,
+    url: r.link,
+    abstract: r.abstract,
+    source: r.source || "",
+    pubDate: r.pubDate,
+    category: r.category,
+    enterprise: r.enterprise || null,
+  }));
+
   const categories = {
     "政策法规速递": [],
     "行业要闻精选": [],
     "企业动态精选": [],
   };
 
-  all.forEach((item) => {
+  mapped.forEach((item) => {
     if (categories[item.category]) {
       categories[item.category].push(item);
     } else {
@@ -595,17 +605,9 @@ async function generateDailyReport(query, days = 3) {
   });
 
   return {
-    total: all.length,
+    total: mapped.length,
     categories,
-    results: all.map((r) => ({
-      title: r.title,
-      url: r.link,
-      abstract: r.abstract,
-      source: r.source || "",
-      pubDate: r.pubDate,
-      category: r.category,
-      enterprise: r.enterprise || null,
-    })),
+    results: mapped,
     date: new Date().toISOString().split("T")[0],
   };
 }
@@ -691,6 +693,15 @@ async function generateCityDailyReport(query, days = 3) {
     item.abstract = formatAbstract(item);
   });
 
+  const mapped = all.map((r) => ({
+    title: r.title,
+    url: r.link,
+    abstract: r.abstract,
+    source: r.source || "",
+    pubDate: r.pubDate,
+    category: r.category,
+  }));
+
   const categories = {
     "中央政策": [],
     "地方政策": [],
@@ -699,7 +710,7 @@ async function generateCityDailyReport(query, days = 3) {
     "行业观点": [],
   };
 
-  all.forEach((item) => {
+  mapped.forEach((item) => {
     if (categories[item.category]) {
       categories[item.category].push(item);
     } else {
@@ -712,19 +723,92 @@ async function generateCityDailyReport(query, days = 3) {
   const keywords = extractKeywords(rawAll);
 
   return {
-    total: all.length,
+    total: mapped.length,
     categories,
-    results: all.map((r) => ({
-      title: r.title,
-      url: r.link,
-      abstract: r.abstract,
-      source: r.source || "",
-      pubDate: r.pubDate,
-      category: r.category,
-    })),
+    results: mapped,
     keywords,
     date: new Date().toISOString().split("T")[0],
   };
 }
 
-module.exports = { generateDailyReport, generateCityDailyReport, ENTERPRISES };
+function formatIsoDate(iso) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "";
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  } catch {
+    return "";
+  }
+}
+
+function generateCityDailyMarkdown(results, dateStr) {
+  if (!results || results.length === 0) return "暂无新闻素材。";
+
+  const d = new Date(dateStr);
+  const dateCn = `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, "0")}月${String(d.getDate()).padStart(2, "0")}日`;
+
+  const endDate = dateStr;
+  const startD = new Date(d);
+  startD.setDate(startD.getDate() - 2);
+  const startDate = `${startD.getFullYear()}-${String(startD.getMonth() + 1).padStart(2, "0")}-${String(startD.getDate()).padStart(2, "0")}`;
+
+  const used = new Set();
+  const pick = (category, count) => {
+    const matched = results.filter((r) => r.category === category && !used.has(r.url));
+    const picked = matched.slice(0, count);
+    picked.forEach((r) => used.add(r.url));
+    if (picked.length < count) {
+      const fallback = results.filter((r) => !used.has(r.url)).slice(0, count - picked.length);
+      fallback.forEach((r) => used.add(r.url));
+      picked.push(...fallback);
+    }
+    return picked;
+  };
+
+  const central = pick("中央政策", 2);
+  const local = pick("地方政策", 2);
+  const practice = pick("地方实践案例", 2);
+  const project = pick("行业观点", 2);
+  const opinion = pick("行业观点", 1);
+  const digital = pick("城市更新数字化", 1);
+
+  let allSelected = [...central, ...local, ...practice, ...project, ...opinion, ...digital];
+  if (allSelected.length < 10) {
+    const extra = results.filter((r) => !used.has(r.url)).slice(0, 10 - allSelected.length);
+    extra.forEach((r) => used.add(r.url));
+    allSelected.push(...extra);
+  }
+
+  const sections = [
+    { title: "政策动态", items: central },
+    { title: "地方政策动态", items: local },
+    { title: "地方实践案例", items: practice },
+    { title: "项目实践", items: project },
+    { title: "行业观点", items: opinion },
+    { title: "技术创新｜数字化、智慧化应用", items: digital },
+  ];
+
+  let newsBody = "";
+  let idx = 1;
+  sections.forEach((sec) => {
+    if (sec.items.length === 0) return;
+    newsBody += `\n━━━━━━━━━━━━━━━\n\n## ${sec.title}\n\n`;
+    sec.items.forEach((r) => {
+      const pub = r.pubDate ? formatIsoDate(r.pubDate) : dateStr;
+      newsBody += `**${idx}. ${r.title}**\n${r.abstract || r.title}\n> 发布时间：${pub} ｜ 来源：${r.source || "网络"}\n> [点击查看原文](${r.url})\n\n`;
+      idx++;
+    });
+  });
+
+  const firstNews = results[0];
+  const focus = firstNews ? firstNews.title.slice(0, 20) : "城市更新持续推进";
+  const summary = results.slice(0, 3).map((r) => r.title).join("；").slice(0, 70);
+
+  return `# 今日城市更新日报\n\n> **日期**　${dateCn}\n> **生成时间**　08:00:00\n> **新闻窗口**　${startDate} ~ ${endDate}（严格近 3 日）\n> **新闻总数**　${allSelected.length} 条\n> **今日聚焦**　<font color="info">${focus}</font>\n${newsBody}\n━━━━━━━━━━━━━━━\n\n## 今日一句话总结\n> <font color="comment">${summary}...</font>\n\n━━━━━━━━━━━━━━━\n\n**日报内容由优码数智库生成** ｜ 发布日期：${dateStr}\n[优码AI · 让组织能力可视化](https://youmatech.com/ai)`;
+}
+
+module.exports = { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown, ENTERPRISES };

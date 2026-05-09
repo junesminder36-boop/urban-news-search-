@@ -229,6 +229,16 @@ function copyDailyContent() {
     return;
   }
 
+  // 优先使用后端生成的 Markdown 日报模板
+  if (currentData.dailyReport) {
+    navigator.clipboard.writeText(currentData.dailyReport).then(() => {
+      showToast("日报内容已复制");
+    }).catch(() => {
+      showToast("复制失败，请手动复制");
+    });
+    return;
+  }
+
   const dateStr = new Date().toLocaleDateString("zh-CN");
   const title = document.title.includes("城市更新") ? "城市更新日报" : "行业日报";
   let text = `${title} (${dateStr})\n\n`;
