@@ -550,6 +550,13 @@ function formatAbstract(item) {
   return "";
 }
 
+function getChinaDateString() {
+  const d = new Date();
+  // Render 服务器通常为 UTC，手动加 8 小时转成北京时间
+  const chinaTime = new Date(d.getTime() + 8 * 60 * 60 * 1000);
+  return chinaTime.toISOString().slice(0, 10);
+}
+
 // ========== 生成行业日报 ==========
 async function generateDailyReport(query, days = 3) {
   let [policyNews, industryNews, enterpriseNews] = await Promise.all([
@@ -607,7 +614,7 @@ async function generateDailyReport(query, days = 3) {
     total: mapped.length,
     categories,
     results: mapped,
-    date: new Date().toISOString().split("T")[0],
+    date: getChinaDateString(),
   };
 }
 
@@ -726,7 +733,7 @@ async function generateCityDailyReport(query, days = 3) {
     categories,
     results: mapped,
     keywords,
-    date: new Date().toISOString().split("T")[0],
+    date: getChinaDateString(),
   };
 }
 
@@ -799,7 +806,9 @@ function generateCityDailyMarkdown(results, dateStr) {
     sec.items.forEach((r) => {
       const pub = r.pubDate ? formatIsoDate(r.pubDate) : dateStr;
       const abs = (r.abstract || "").trim();
-      const hasRealAbstract = abs && abs !== r.title.trim() && !r.title.includes(abs.slice(0, 12));
+      const titlePrefix = r.title.trim().slice(0, 30);
+      const absPrefix = abs.slice(0, 30);
+      const hasRealAbstract = abs && absPrefix !== titlePrefix;
 
       newsBody += `**${idx}. ${r.title}**`;
       if (hasRealAbstract) {
