@@ -6,266 +6,120 @@
   <title>城市更新日报 - 优码智库AI搜索站</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .daily-layout {
-      display: grid;
-      grid-template-columns: 1fr 380px;
-      gap: 28px;
-      align-items: start;
-    }
-    @media (max-width: 960px) {
-      .daily-layout {
-        grid-template-columns: 1fr;
-      }
-      .daily-sidebar {
-        order: -1;
-      }
-    }
+    .page-header { margin-bottom: 28px; padding: 24px; }
 
-    .news-content-title {
+    .search-section { margin-bottom: 28px; }
+    .search-box.full-width {
+      max-width: 100%;
+      margin-bottom: 14px;
+    }
+    .search-actions-row {
       display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 18px;
-      font-size: 18px;
-      color: #fff;
-      font-weight: 600;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .news-content-title .finger-icon {
-      font-size: 22px;
-      line-height: 1;
-    }
-
-    .ai-assistant-card {
-      padding: 24px;
-      position: sticky;
-      top: 24px;
-    }
-    .ai-assistant-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 18px;
-    }
-    .ai-assistant-header h3 {
-      font-size: 18px;
-      color: #fff;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .ai-assistant-header h3::before {
-      content: "";
-      display: inline-block;
-      width: 22px;
-      height: 22px;
-      background: linear-gradient(135deg, #667eea, #a855f7);
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='8' x2='12' y2='16'%3E%3C/line%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/line%3E%3C/svg%3E") no-repeat center;
-      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='12' y1='8' x2='12' y2='16'%3E%3C/line%3E%3Cline x1='8' y1='12' x2='16' y2='12'%3E%3C/line%3E%3C/svg%3E") no-repeat center;
-      mask-size: contain;
-      -webkit-mask-size: contain;
-      border-radius: 6px;
-    }
-    .ai-assistant-icon {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      cursor: help;
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .ai-assistant-stats {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      font-size: 14px;
-      color: rgba(255,255,255,0.55);
-    }
-    .ai-assistant-stats strong {
-      color: #fff;
-      font-size: 16px;
-      font-weight: 600;
-    }
-    .ai-assistant-stats button {
-      padding: 5px 14px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.04);
-      color: rgba(255,255,255,0.45);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .ai-assistant-stats button:hover {
-      background: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.7);
-    }
-
-    .ai-section {
-      margin-bottom: 18px;
-    }
-    .ai-section label {
-      display: block;
-      font-size: 13px;
-      color: rgba(255,255,255,0.35);
-      margin-bottom: 10px;
-      letter-spacing: 0.02em;
-    }
-
-    .report-tabs {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-    }
-    .report-tab {
-      padding: 12px 10px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
-      color: rgba(255,255,255,0.5);
-      font-size: 14px;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.2s;
-      line-height: 1.3;
-    }
-    .report-tab.active {
-      background: rgba(102, 126, 234, 0.18);
-      border-color: rgba(102, 126, 234, 0.45);
-      color: #fff;
-    }
-    .report-tab span {
-      display: block;
-      font-size: 11px;
-      color: rgba(255,255,255,0.3);
-      margin-top: 4px;
-    }
-    .report-tab.active span {
-      color: rgba(255,255,255,0.5);
-    }
-
-    .output-format {
-      padding: 12px 16px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
-      color: rgba(255,255,255,0.7);
-      font-size: 14px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .btn-generate-daily {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
+    .search-actions-row button {
+      padding: 12px 28px;
+      border-radius: 40px;
       border: none;
-      background: linear-gradient(135deg, #667eea 0%, #a855f7 100%);
-      color: #fff;
       font-size: 15px;
       font-weight: 600;
       cursor: pointer;
-      margin-top: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
       transition: all 0.3s ease;
-      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.25);
+    }
+    #searchBtn {
+      background: linear-gradient(135deg, #667eea, #a855f7);
+      color: #fff;
+    }
+    #searchBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+    #dailyBtn {
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: #fff;
+    }
+    #dailyBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+    }
+    #refreshBtn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.7);
+    }
+    #refreshBtn:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+
+    .ai-assistant-simple {
+      text-align: center;
+      padding: 32px 0;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: 8px;
+    }
+    .btn-generate-daily {
+      padding: 14px 40px;
+      border-radius: 40px;
+      border: none;
+      background: linear-gradient(135deg, #667eea, #a855f7);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(102,126,234,0.3);
+      transition: all 0.3s ease;
     }
     .btn-generate-daily:hover {
       transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(102, 126, 234, 0.4);
-    }
-    .generate-icon {
-      font-size: 16px;
+      box-shadow: 0 8px 28px rgba(102,126,234,0.45);
     }
 
-    .generate-hint {
-      text-align: center;
-      font-size: 12px;
-      color: rgba(255,255,255,0.3);
-      margin-top: 10px;
-      letter-spacing: 0.02em;
+    .markdown-report {
+      margin-top: 28px;
+      animation: fadeIn 0.5s ease;
     }
-
-    .hot-keywords-section {
-      margin-top: 22px;
-      padding-top: 18px;
-      border-top: 1px solid rgba(255,255,255,0.06);
-    }
-    .hot-keywords-header {
+    .markdown-report-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
-    }
-    .hot-keywords-header h4 {
-      font-size: 14px;
-      color: #fff;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .hot-keywords-header h4::before {
-      content: "🔥";
-      font-size: 12px;
-    }
-    .hot-keywords-header button {
-      background: none;
-      border: none;
-      color: #667eea;
-      font-size: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .hot-keywords {
-      display: flex;
+      margin-bottom: 16px;
+      gap: 12px;
       flex-wrap: wrap;
-      gap: 8px;
     }
-    .hot-keywords span {
-      padding: 6px 14px;
-      border-radius: 20px;
-      border: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.03);
-      color: rgba(255,255,255,0.55);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .hot-keywords span:hover {
-      background: rgba(102, 126, 234, 0.15);
-      border-color: rgba(102, 126, 234, 0.3);
+    .markdown-report-header h3 {
       color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    #markdownContent {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 28px;
+      color: rgba(255,255,255,0.85);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      overflow-x: auto;
+      max-height: 70vh;
+      overflow-y: auto;
     }
 
     @media (max-width: 768px) {
-      .daily-layout {
-        gap: 20px;
+      .search-actions-row button {
+        flex: 1;
+        padding: 12px;
+        font-size: 14px;
       }
-      .ai-assistant-card {
-        position: static;
-        padding: 20px;
-      }
-      .report-tabs {
-        gap: 8px;
-      }
-      .report-tab {
-        padding: 10px 8px;
-        font-size: 13px;
-      }
+      .page-header { padding: 16px; }
+      .markdown-report-header h3 { font-size: 16px; }
+      #markdownContent { padding: 18px; }
     }
   </style>
 </head>
@@ -281,156 +135,55 @@
       <p>汇聚中央与地方政策、实践案例、数字化动态</p>
     </header>
 
-    <div class="daily-layout">
-      <!-- 左侧：新闻内容 -->
-      <div class="daily-main">
-        <div class="news-content-title">
-          <span class="finger-icon">👆</span>
-          <span>今日新闻内容</span>
-        </div>
-
-        <div class="search-box">
-          <input type="text" id="searchInput" placeholder="例如：城市更新、深圳旧改、城中村改造..." />
-          <div class="search-actions">
-            <button id="searchBtn">搜索</button>
-            <button id="refreshBtn" class="btn-daily" style="background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);">刷新</button>
-          </div>
-        </div>
-
-        <div id="loading" class="loading hidden">
-          <div class="spinner"></div>
-          <p>正在从中央及各地政府网站、媒体RSS抓取新闻并分析...</p>
-        </div>
-
-        <div id="results" class="results hidden">
-          <div class="stats-bar-wrap">
-            <div class="stats-bar stats-grow" id="statsBar"></div>
-            <button id="copyBtn" class="btn-daily stats-copy-btn">复制日报</button>
-          </div>
-
-          <div class="ai-summary-card">
-            <h2>AI 综合分析</h2>
-            <div id="summaryContent" class="summary-content"></div>
-            <div id="highlightsContent" class="highlights-content"></div>
-          </div>
-
-          <div class="category-tabs" id="categoryTabs">
-            <button class="tab-btn active" data-cat="all">全部</button>
-            <button class="tab-btn" data-cat="中央政策">中央政策</button>
-            <button class="tab-btn" data-cat="地方政策">地方政策</button>
-            <button class="tab-btn" data-cat="地方实践案例">地方实践案例</button>
-            <button class="tab-btn" data-cat="城市更新数字化">城市更新数字化</button>
-            <button class="tab-btn" data-cat="行业观点">行业观点</button>
-          </div>
-
-          <div id="newsList" class="news-list"></div>
-        </div>
-
-        <div id="error" class="error hidden"></div>
+    <div class="search-section">
+      <div class="search-box full-width">
+        <input type="text" id="searchInput" placeholder="例如：城市更新、深圳旧改、城中村改造..." />
       </div>
-
-      <!-- 右侧：AI日报助手 -->
-      <div class="daily-sidebar">
-        <div class="ai-assistant-card glass-card">
-          <div class="ai-assistant-header">
-            <h3>AI日报助手</h3>
-            <span class="ai-assistant-icon" title="选择新闻后点击生成，即可获得AI整理的日报">?</span>
-          </div>
-
-          <div class="ai-assistant-stats">
-            <span>已选择 <strong id="selectedCount">0</strong> 条资讯</span>
-            <button id="clearSelection">清空选择</button>
-          </div>
-
-          <div class="ai-section">
-            <label>报告类型</label>
-            <div class="report-tabs">
-              <button class="report-tab active">日报<span>当天资讯汇总</span></button>
-              <button class="report-tab">周报<span>7天资讯汇总</span></button>
-              <button class="report-tab">专题<span>深度专题报告</span></button>
-            </div>
-          </div>
-
-          <div class="ai-section">
-            <label>输出格式</label>
-            <div class="output-format">
-              <span>Markdown</span>
-              <span style="color: rgba(255,255,255,0.3);">▼</span>
-            </div>
-          </div>
-
-          <button id="dailyBtn" class="btn-generate-daily">
-            生成城市更新日报 <span class="generate-icon">✦</span>
-          </button>
-          <p class="generate-hint">只对已筛选内容调用AI，节省Token</p>
-
-          <div class="hot-keywords-section">
-            <div class="hot-keywords-header">
-              <h4>今日热点关键词</h4>
-              <button id="refreshKeywords">换一换</button>
-            </div>
-            <div class="hot-keywords" id="hotKeywords">
-              <span>城市更新</span>
-              <span>老旧小区</span>
-              <span>城中村改造</span>
-              <span>片区统筹</span>
-              <span>存量资产</span>
-              <span>完整社区</span>
-            </div>
-          </div>
-        </div>
+      <div class="search-actions-row">
+        <button id="searchBtn">搜索</button>
+        <button id="dailyBtn" class="btn-daily">一键生成今日新闻</button>
+        <button id="refreshBtn">刷新</button>
       </div>
     </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>正在抓取新闻并分析...</p>
+    </div>
+
+    <!-- 新闻列表 -->
+    <div id="results" class="results hidden">
+      <div class="stats-bar" id="statsBar" style="margin-bottom: 20px;"></div>
+      <div class="category-tabs" id="categoryTabs">
+        <button class="tab-btn active" data-cat="all">全部</button>
+        <button class="tab-btn" data-cat="中央政策">中央政策</button>
+        <button class="tab-btn" data-cat="地方政策">地方政策</button>
+        <button class="tab-btn" data-cat="地方实践案例">地方实践案例</button>
+        <button class="tab-btn" data-cat="城市更新数字化">城市更新数字化</button>
+        <button class="tab-btn" data-cat="行业观点">行业观点</button>
+      </div>
+      <div id="newsList" class="news-list"></div>
+    </div>
+
+    <!-- AI日报助手 — 简化 -->
+    <div id="aiAssistant" class="ai-assistant-simple hidden">
+      <button id="generateReportBtn" class="btn-generate-daily">
+        生成城市更新日报 <span>✦</span>
+      </button>
+    </div>
+
+    <!-- Markdown 日报展示 -->
+    <div id="markdownReport" class="markdown-report hidden">
+      <div class="markdown-report-header">
+        <h3>城市更新日报</h3>
+        <button id="copyMarkdownBtn" class="btn-daily stats-copy-btn">复制日报</button>
+      </div>
+      <pre id="markdownContent"></pre>
+    </div>
+
+    <div id="error" class="error hidden"></div>
   </div>
 
   <script src="app.js"></script>
-  <script>
-    // 右侧面板简单交互
-    document.querySelectorAll('.report-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        document.querySelectorAll('.report-tab').forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-      });
-    });
-
-    // 清空选择
-    document.getElementById('clearSelection')?.addEventListener('click', () => {
-      document.getElementById('selectedCount').textContent = '0';
-    });
-
-    // 换一换关键词
-    const keywordPool = [
-      ['城市更新','老旧小区','城中村改造','片区统筹','存量资产','完整社区'],
-      ['智慧社区','数字孪生','CIM平台','有机更新','历史街区','微更新'],
-      ['REITs','TOD','海绵城市','碳中和','ESG','保障房'],
-      ['BIM','物联感知','智慧物业','产业园区','地产动态','物业管理']
-    ];
-    let keywordIndex = 0;
-    document.getElementById('refreshKeywords')?.addEventListener('click', () => {
-      keywordIndex = (keywordIndex + 1) % keywordPool.length;
-      const container = document.getElementById('hotKeywords');
-      container.innerHTML = keywordPool[keywordIndex].map(k => `<span>${k}</span>`).join('');
-    });
-
-    // 热点关键词点击填入搜索框
-    document.getElementById('hotKeywords')?.addEventListener('click', (e) => {
-      if (e.target.tagName === 'SPAN') {
-        const input = document.getElementById('searchInput');
-        if (input) {
-          input.value = e.target.textContent;
-          input.focus();
-        }
-      }
-    });
-
-    // 更新已选择数量（根据当前显示的新闻数）
-    const observer = new MutationObserver(() => {
-      const count = document.querySelectorAll('#newsList .news-card').length;
-      const el = document.getElementById('selectedCount');
-      if (el) el.textContent = count;
-    });
-    const newsList = document.getElementById('newsList');
-    if (newsList) observer.observe(newsList, { childList: true });
-  </script>
 </body>
 </html>

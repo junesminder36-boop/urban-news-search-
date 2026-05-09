@@ -83,28 +83,39 @@ function renderResults(data) {
       }
     }
   }
-  statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
-
-  if (data.summary) {
-    summaryContent.textContent = data.summary;
-  } else {
-    summaryContent.textContent = "暂无 AI 分析结果。";
+  if (statsBar) {
+    statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
   }
 
-  if (data.highlights && data.highlights.length > 0) {
-    const ul = document.createElement("ul");
-    data.highlights.forEach((h) => {
-      const li = document.createElement("li");
-      li.textContent = h;
-      ul.appendChild(li);
-    });
-    highlightsContent.innerHTML = "<h3>关键要点</h3>";
-    highlightsContent.appendChild(ul);
-  } else if (data.raw) {
-    highlightsContent.innerHTML = `<h3>AI 回复</h3><pre class="raw-response">${escapeHtml(data.raw)}</pre>`;
-  } else {
-    highlightsContent.innerHTML = '<h3>关键要点</h3><p class="empty-note">暂无要点</p>';
+  if (summaryContent) {
+    if (data.summary) {
+      summaryContent.textContent = data.summary;
+    } else {
+      summaryContent.textContent = "暂无 AI 分析结果。";
+    }
   }
+
+  if (highlightsContent) {
+    if (data.highlights && data.highlights.length > 0) {
+      const ul = document.createElement("ul");
+      data.highlights.forEach((h) => {
+        const li = document.createElement("li");
+        li.textContent = h;
+        ul.appendChild(li);
+      });
+      highlightsContent.innerHTML = "<h3>关键要点</h3>";
+      highlightsContent.appendChild(ul);
+    } else if (data.raw) {
+      highlightsContent.innerHTML = `<h3>AI 回复</h3><pre class="raw-response">${escapeHtml(data.raw)}</pre>`;
+    } else {
+      highlightsContent.innerHTML = '<h3>关键要点</h3><p class="empty-note">暂无要点</p>';
+    }
+  }
+
+  const aiAssistantEl = document.getElementById("aiAssistant");
+  if (aiAssistantEl) aiAssistantEl.classList.remove("hidden");
+  const mdReport = document.getElementById("markdownReport");
+  if (mdReport) mdReport.classList.add("hidden");
 
   renderNewsList();
 }
@@ -225,9 +236,15 @@ async function doDaily(force = false) {
     }
   }
 
-  dailyBtn.disabled = true;
-  dailyBtn.textContent = "生成中";
+  if (dailyBtn) {
+    dailyBtn.disabled = true;
+    dailyBtn.textContent = "生成中";
+  }
   results.classList.add("hidden");
+  const mdReport = document.getElementById("markdownReport");
+  const aiAssistant = document.getElementById("aiAssistant");
+  if (mdReport) mdReport.classList.add("hidden");
+  if (aiAssistant) aiAssistant.classList.add("hidden");
   error.classList.add("hidden");
   loading.classList.remove("hidden");
 
@@ -238,8 +255,10 @@ async function doDaily(force = false) {
     const data = await readApiJson(res);
 
     loading.classList.add("hidden");
-    dailyBtn.disabled = false;
-    dailyBtn.textContent = "一键生成日报";
+    if (dailyBtn) {
+      dailyBtn.disabled = false;
+      dailyBtn.textContent = "一键生成今日新闻";
+    }
 
     if (data.error) {
       showError(data.error);
@@ -252,8 +271,10 @@ async function doDaily(force = false) {
     renderResults(data);
   } catch (err) {
     loading.classList.add("hidden");
-    dailyBtn.disabled = false;
-    dailyBtn.textContent = "一键生成日报";
+    if (dailyBtn) {
+      dailyBtn.disabled = false;
+      dailyBtn.textContent = "一键生成今日新闻";
+    }
     showError(`请求失败: ${err.message}`);
   }
 }
@@ -331,12 +352,64 @@ if (refreshBtn) {
   });
 }
 
-/* 页面加载时自动恢复当日缓存 */
-(function restoreDailyOnLoad() {
+/* ===== Markdown 日报展示 ===== */
+function showMarkdownReport() {
+  if (!currentData || !currentData.dailyReport) {
+    showToast("请先生成今日新闻");
+    return;
+  }
+  const mdReport = document.getElementById("markdownReport");
+  const mdContent = document.getElementById("markdownContent");
+  if (mdReport && mdContent) {
+    mdContent.textContent = currentData.dailyReport;
+    mdReport.classList.remove("hidden");
+    mdReport.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
+function copyMarkdownReport() {
+  if (!currentData || !currentData.dailyReport) {
+    showToast("请先生成日报");
+    return;
+  }
+  navigator.clipboard.writeText(currentData.dailyReport).then(() => {
+    showToast("日报已复制");
+  }).catch(() => {
+    showToast("复制失败，请手动复制");
+  });
+}
+
+/* 绑定新按钮 */
+const generateReportBtn = document.getElementById("generateReportBtn");
+if (generateReportBtn) {
+  generateReportBtn.addEventListener("click", showMarkdownReport);
+}
+
+const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
+if (copyMarkdownBtn) {
+  copyMarkdownBtn.addEventListener("click", copyMarkdownReport);
+}
+
+/* ===== 缓存恢复（含 bfcache 处理） ===== */
+function tryRestoreFromCache() {
   const cached = loadDailyCache();
   if (cached && cached.results && cached.results.length > 0) {
     currentData = cached;
     resetCategory();
     renderResults(cached);
+    return true;
   }
+  return false;
+}
+
+// 页面首次加载
+(function restoreDailyOnLoad() {
+  tryRestoreFromCache();
 })();
+
+// 从浏览器 bfcache 恢复时（前进/后退）
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    tryRestoreFromCache();
+  }
+});
