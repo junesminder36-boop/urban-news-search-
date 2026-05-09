@@ -7,269 +7,110 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- 顶部导航 -->
-  <nav class="top-nav">
-    <div class="nav-brand">
-      <div class="nav-logo">
-        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <path d="M14 2L25 8.5V19.5L14 26L3 19.5V8.5L14 2Z" stroke="currentColor" stroke-width="2" fill="none"/>
-          <path d="M14 8L19 11V17L14 20L9 17V11L14 8Z" fill="currentColor" opacity="0.6"/>
-        </svg>
-      </div>
-      <div class="nav-title-group">
-        <div class="nav-title">优码智库AI搜索站</div>
-        <div class="nav-subtitle">低成本行业资讯聚合与日报生成工具</div>
-      </div>
+  <div class="container">
+    <div class="top-bar">
+      <span id="topDate"></span>
+      <button id="loginBtn" class="login-btn">登录</button>
     </div>
-    <div class="nav-links">
-      <a href="index.html" class="nav-link active">首页</a>
-      <a href="daily.html" class="nav-link">搜索</a>
-      <a href="daily.html" class="nav-link">报告</a>
+
+    <header class="header" style="padding: 48px;">
+      <h1>优码智库AI搜索站</h1>
+      <p>智能聚合行业资讯、招标信息与分析报告</p>
+    </header>
+
+    <div class="func-grid">
+      <a href="city-update.html" class="func-card glass-card">
+        <span class="icon">🏙️</span>
+        <h3>城市更新日报</h3>
+        <p>汇聚中央与地方城市更新政策、实践案例、数字化动态，AI 智能总结</p>
+        <span class="badge badge-active">已上线</span>
+      </a>
+
+      <a href="daily.html" class="func-card glass-card">
+        <span class="icon">📋</span>
+        <h3>行业日报</h3>
+        <p>地产 · 物业 · 园区 · 医院等不动产行业每日精选，含政策法规、企业动态与 AI 洞察</p>
+        <span class="badge badge-active">已上线</span>
+      </a>
+
+      <a href="competitor.html" class="func-card glass-card">
+        <span class="icon">🏢</span>
+        <h3>竞品动态</h3>
+        <p>头部房企/物企数字化转型、产品发布、市场策略跟踪分析</p>
+        <span class="badge badge-active">已上线</span>
+      </a>
+
+      <a href="bidding.html" class="func-card glass-card">
+        <span class="icon">📑</span>
+        <h3>招标信息</h3>
+        <p>智慧城市、智慧物业、城市更新相关招投标信息聚合与筛选</p>
+        <span class="badge badge-dev">开发中</span>
+      </a>
     </div>
-    <button id="loginBtn" class="nav-logout">退出</button>
-  </nav>
 
-  <div class="main-layout">
-    <!-- 左侧主内容 -->
-    <main class="main-content">
-      <!-- Hero 卡片 -->
-      <div class="hero-card glass-card">
-        <div class="hero-badge">
-          <span class="badge-icon">⚡</span>
-          MVP版本：先聚合，再精选，最后生成报告
-        </div>
-        <h1 class="hero-title">优码智库AI搜索站</h1>
-        <p class="hero-desc">每日自动聚合城市更新、地产物业、招投标与政策资讯，按需生成简版日报。</p>
-
-        <div class="hero-search-box">
-          <span class="hero-search-icon">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-              <circle cx="7.5" cy="7.5" r="5.5" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M12 12L16 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <input type="text" id="searchInput" placeholder="搜索城市更新、政策法规、招投标、物业管理、产业园区、企业动态...">
-          <button id="searchBtn">搜索</button>
-        </div>
-
-        <div class="hero-categories" id="categoryTabs">
-          <button class="hc-btn active" data-cat="all">全部</button>
-          <button class="hc-btn" data-cat="news">新闻资讯</button>
-          <button class="hc-btn" data-cat="policy">政策法规</button>
-          <button class="hc-btn" data-cat="bidding">招投标</button>
-          <button class="hc-btn" data-cat="enterprise">企业动态</button>
-          <button class="hc-btn" data-cat="report">行业报告</button>
-        </div>
-      </div>
-
-      <!-- 四宫格统计卡片 -->
-      <div class="stats-grid">
-        <a href="city-update.html" class="stats-card glass-card">
-          <div class="stats-card-top">
-            <div class="stats-card-icon">🏙️</div>
-            <span class="stats-arrow">›</span>
-          </div>
-          <h3>城市更新日报</h3>
-          <p>老旧小区、城中村、片区更新、城市体检</p>
-          <div class="stats-big-num">128<span class="stats-unit">条</span></div>
-          <div class="stats-mini-tags">
-            <span>政策 32</span>
-            <span>项目 46</span>
-            <span>案例 18</span>
-          </div>
-        </a>
-
-        <a href="daily.html" class="stats-card glass-card">
-          <div class="stats-card-top">
-            <div class="stats-card-icon">📋</div>
-            <span class="stats-arrow">›</span>
-          </div>
-          <h3>行业日报</h3>
-          <p>地产、物业、园区、保障房、智慧社区动态</p>
-          <div class="stats-big-num">246<span class="stats-unit">条</span></div>
-          <div class="stats-mini-tags">
-            <span>地产 82</span>
-            <span>物业 64</span>
-            <span>园区 31</span>
-          </div>
-        </a>
-
-        <a href="competitor.html" class="stats-card glass-card">
-          <div class="stats-card-top">
-            <div class="stats-card-icon">🏢</div>
-            <span class="stats-arrow">›</span>
-          </div>
-          <h3>竞品动态</h3>
-          <p>头部房企、物企、城服企业重点动态追踪</p>
-          <div class="stats-big-num">36<span class="stats-unit">家</span></div>
-          <div class="stats-mini-tags">
-            <span>合作 12</span>
-            <span>产品 8</span>
-            <span>舆情 3</span>
-          </div>
-        </a>
-
-        <a href="bidding.html" class="stats-card glass-card">
-          <div class="stats-card-top">
-            <div class="stats-card-icon">📑</div>
-            <span class="stats-arrow">›</span>
-          </div>
-          <h3>招标信息</h3>
-          <p>城市更新、智慧物业、改造工程相关招采信息</p>
-          <div class="stats-big-num">89<span class="stats-unit">条</span></div>
-          <div class="stats-mini-tags">
-            <span>工程 41</span>
-            <span>服务 28</span>
-            <span>运维 9</span>
-          </div>
-        </a>
-      </div>
-
-      <!-- 今日重点资讯 -->
-      <div class="today-section glass-card">
-        <div class="today-header">
-          <div>
-            <h2>今日重点资讯</h2>
-            <p class="today-sub">基于关键词规则筛选后的高相关信息，首页只展示最值得看的内容。</p>
-          </div>
-          <a href="daily.html" class="btn-outline">查看更多</a>
-        </div>
-        <div id="todayList" class="today-list">
-          <div class="loading" id="todayLoading">
-            <div class="spinner"></div>
-            <p>正在加载今日资讯...</p>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- 右侧边栏 -->
-    <aside class="sidebar">
-      <!-- 一键生成日报 -->
-      <div class="sidebar-card glass-card">
-        <div class="sidebar-card-header">
-          <div class="sidebar-icon-wrap">📄</div>
-          <div>
-            <h3 class="sidebar-card-title">一键生成日报</h3>
-            <p class="sidebar-card-desc">只对精选内容调用AI，节省Token。</p>
-          </div>
-        </div>
-        <div class="report-tabs">
-          <button class="report-tab active">
-            <span class="rt-main">日报</span>
-            <span class="rt-sub">Markdown</span>
-          </button>
-          <button class="report-tab">
-            <span class="rt-main">周报</span>
-            <span class="rt-sub">Markdown</span>
-          </button>
-          <button class="report-tab">
-            <span class="rt-main">专题</span>
-            <span class="rt-sub">Markdown</span>
-          </button>
-        </div>
-        <button class="btn-generate" id="dailyBtn">
-          <span>生成今日简报</span>
-          <span class="btn-arrow">+</span>
-        </button>
-        <div class="report-formats">
-          <span>⬇ 支持 Markdown</span>
-          <span class="rf-future">后续扩展 Word / PDF</span>
-        </div>
-      </div>
-
-      <!-- 我的报告 -->
-      <div class="sidebar-card glass-card">
-        <div class="sidebar-card-header-row">
-          <h3 class="sidebar-card-title">我的报告</h3>
-          <a href="daily.html" class="link-small">全部</a>
-        </div>
-        <div class="report-list">
-          <a href="daily.html" class="report-item">
-            <div class="report-item-title">城市更新行业日报</div>
-            <div class="report-item-meta">
-              <span class="report-date">📅 2026-05-08</span>
-              <span class="badge-format">Markdown</span>
-            </div>
-          </a>
-          <a href="daily.html" class="report-item">
-            <div class="report-item-title">物业管理行业周报</div>
-            <div class="report-item-meta">
-              <span class="report-date">📅 2026-05-04 ~ 2026-05-08</span>
-              <span class="badge-format badge-word">Word</span>
-            </div>
-          </a>
-          <a href="daily.html" class="report-item">
-            <div class="report-item-title">招投标线索简报</div>
-            <div class="report-item-meta">
-              <span class="report-date">📅 2026-05-07</span>
-              <span class="badge-format badge-pdf">PDF</span>
-            </div>
-          </a>
-        </div>
-      </div>
-
-      <!-- MVP原则 -->
-      <div class="sidebar-card glass-card mvp-card">
-        <h4 class="mvp-title">MVP原则</h4>
-        <p class="mvp-desc">抓取靠定时任务，分类靠关键词规则，AI只在生成报告时调用。</p>
-      </div>
-    </aside>
+    <footer style="text-align: center; padding: 40px; color: rgba(255,255,255,0.25); font-size: 13px;">
+      <p>优码智库 · AI 驱动的不动产行业信息聚合平台</p>
+    </footer>
   </div>
 
-  <!-- 登录弹窗（非强制，点击登录按钮才弹出） -->
+  <!-- 登录弹窗 -->
   <div id="loginModal" class="login-modal hidden">
     <div class="login-content glass-card">
       <div class="login-header">
-        <h2>优码智库AI搜索站</h2>
+        <h2>🔐 优码智库AI搜索站</h2>
         <p>请输入账号密码访问优码智库</p>
       </div>
-      <input type="text" id="loginUser" placeholder="账号">
-      <input type="password" id="loginPass" placeholder="密码">
+      <input type="text" id="loginUser" placeholder="账号" />
+      <input type="password" id="loginPass" placeholder="密码" />
       <button id="doLogin">登录</button>
       <p id="loginError" class="login-error hidden">账号或密码错误</p>
     </div>
   </div>
 
-  <!-- 搜索结果区域 -->
-  <div class="container search-results-container hidden" id="results">
-    <div class="stats-bar-wrap">
-      <div class="stats-bar" id="statsBar"></div>
-      <button id="copyBtn" class="btn-daily stats-copy-btn">📋 复制日报</button>
-    </div>
-    <div class="ai-summary-card">
-      <h2>🤖 AI 智能分析</h2>
-      <div class="summary-content" id="summaryContent">暂无分析结果</div>
-      <div class="highlights-content" id="highlightsContent"></div>
-    </div>
-    <div class="category-tabs" id="resultCategoryTabs"></div>
-    <div class="news-list" id="newsList"></div>
-  </div>
-
-  <script src="app.js"></script>
   <script>
-    // 登录状态管理
+    // 右上角日期
+    function updateDate() {
+      const now = new Date();
+      const weekdays = ['周日','周一','周二','周三','周四','周五','周六'];
+      const y = now.getFullYear();
+      const m = String(now.getMonth() + 1).padStart(2, '0');
+      const d = String(now.getDate()).padStart(2, '0');
+      const w = weekdays[now.getDay()];
+      document.getElementById("topDate").innerHTML = `<span style="background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); font-size: 14px; color: rgba(255,255,255,0.85);">${y}年${m}月${d}日 ${w}</span>`;
+    }
+    updateDate();
+
+    // 登录逻辑
     const CORRECT_USER = "admin";
     const CORRECT_PASS = "youma2024";
     const LOGIN_KEY = "youma_logged_in";
     const loginBtn = document.getElementById("loginBtn");
-    const loginModal = document.getElementById("loginModal");
 
     function updateLoginBtn() {
       if (localStorage.getItem(LOGIN_KEY)) {
         loginBtn.textContent = "退出";
+        loginBtn.style.background = "rgba(239,68,68,0.15)";
+        loginBtn.style.borderColor = "rgba(239,68,68,0.3)";
+        loginBtn.style.color = "#fca5a5";
       } else {
         loginBtn.textContent = "登录";
+        loginBtn.style.background = "rgba(255,255,255,0.06)";
+        loginBtn.style.borderColor = "rgba(255,255,255,0.2)";
+        loginBtn.style.color = "rgba(255,255,255,0.7)";
+      }
+    }
+
+    function checkLogin() {
+      if (!localStorage.getItem(LOGIN_KEY)) {
+        document.getElementById("loginModal").classList.remove("hidden");
+        document.body.style.overflow = "hidden";
       }
     }
 
     loginBtn.addEventListener("click", () => {
       if (localStorage.getItem(LOGIN_KEY)) {
         localStorage.removeItem(LOGIN_KEY);
-        updateLoginBtn();
-      } else {
-        loginModal.classList.remove("hidden");
-        document.body.style.overflow = "hidden";
+        location.reload();
       }
     });
 
@@ -278,7 +119,7 @@
       const p = document.getElementById("loginPass").value.trim();
       if (u === CORRECT_USER && p === CORRECT_PASS) {
         localStorage.setItem(LOGIN_KEY, "1");
-        loginModal.classList.add("hidden");
+        document.getElementById("loginModal").classList.add("hidden");
         document.body.style.overflow = "";
         updateLoginBtn();
       } else {
@@ -290,80 +131,8 @@
       if (e.key === "Enter") document.getElementById("doLogin").click();
     });
 
-    loginModal.addEventListener("click", (e) => {
-      if (e.target === loginModal) {
-        loginModal.classList.add("hidden");
-        document.body.style.overflow = "";
-      }
-    });
-
     updateLoginBtn();
-
-    // 首页分类标签交互（仅切换样式，不触发搜索）
-    const heroCats = document.getElementById("categoryTabs");
-    heroCats.addEventListener("click", (e) => {
-      if (e.target.classList.contains("hc-btn")) {
-        heroCats.querySelectorAll(".hc-btn").forEach(b => b.classList.remove("active"));
-        e.target.classList.add("active");
-      }
-    });
-
-    // 日报类型标签切换
-    const reportTabs = document.querySelectorAll(".report-tab");
-    reportTabs.forEach(tab => {
-      tab.addEventListener("click", () => {
-        reportTabs.forEach(t => t.classList.remove("active"));
-        tab.classList.add("active");
-      });
-    });
-
-    // 加载今日重点资讯（取 city-daily 接口的前3条）
-    async function loadTodayNews() {
-      const container = document.getElementById("todayList");
-      try {
-        const res = await fetch("/api/city-daily");
-        const data = await res.json();
-        if (data.error || !data.results || data.results.length === 0) {
-          container.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">暂无今日资讯</p>';
-          return;
-        }
-        const items = data.results.slice(0, 4);
-        container.innerHTML = items.map(r => {
-          const catClass = `cat-${r.category || "行业观点"}`;
-          return `
-            <a href="${r.url}" target="_blank" rel="noopener" class="today-item">
-              <div class="today-item-main">
-                <span class="today-category ${catClass}">${escapeHtml(r.category || "资讯")}</span>
-                <h4 class="today-item-title">${escapeHtml(r.title)}</h4>
-                <p class="today-item-abs">${escapeHtml(r.abstract || "")}</p>
-              </div>
-              <div class="today-item-meta">
-                <span>${escapeHtml(r.source || "未知来源")}</span>
-                ${r.pubDate ? `<span>${formatDate(r.pubDate)}</span>` : ""}
-              </div>
-            </a>
-          `;
-        }).join("");
-      } catch (err) {
-        container.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">加载失败，请稍后重试</p>';
-      }
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement("div");
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    function formatDate(iso) {
-      try {
-        const d = new Date(iso);
-        if (isNaN(d.getTime())) return "";
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-      } catch { return ""; }
-    }
-
-    loadTodayNews();
+    checkLogin();
   </script>
 </body>
 </html>
