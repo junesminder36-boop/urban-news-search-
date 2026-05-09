@@ -14,15 +14,15 @@
     </div>
 
     <header class="header page-header">
-      <h1 class="page-title">📋 今日行业日报</h1>
+      <h1 class="page-title">今日行业日报</h1>
       <p>不动产行业每日精选：地产 · 物业 · 园区 · 医院</p>
     </header>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="例如：万科、智慧物业、物业数字化..." />
       <div class="search-actions">
-        <button id="searchBtn">🔍 搜索</button>
-        <button id="dailyBtn" class="btn-daily">📋 一键生成日报</button>
+        <button id="searchBtn">搜索</button>
+        <button id="dailyBtn" class="btn-daily">一键生成日报</button>
       </div>
     </div>
 
@@ -33,12 +33,12 @@
 
     <div id="results" class="results hidden">
       <div class="stats-bar-wrap">
-        <div class="stats-bar" id="statsBar" style="flex:1;margin-bottom:0;"></div>
-        <button id="copyBtn" class="btn-daily stats-copy-btn">📋 复制日报</button>
+        <div class="stats-bar stats-grow" id="statsBar"></div>
+        <button id="copyBtn" class="btn-daily stats-copy-btn">复制日报</button>
       </div>
 
       <div class="section-card insight-card">
-        <h2>💡 优码今日洞察</h2>
+        <h2>优码今日洞察</h2>
         <div id="insightsContent"></div>
       </div>
 
@@ -98,7 +98,7 @@
       const query = searchInput.value.trim();
 
       searchBtn.disabled = true;
-      searchBtn.textContent = "搜索中...";
+      searchBtn.textContent = "搜索中";
       results.classList.add("hidden");
       error.classList.add("hidden");
       loading.classList.remove("hidden");
@@ -108,11 +108,11 @@
           ? `/api/daily?q=${encodeURIComponent(query)}`
           : "/api/daily";
         const res = await fetch(url);
-        const data = await res.json();
+        const data = await readApiJson(res);
 
         loading.classList.add("hidden");
         searchBtn.disabled = false;
-        searchBtn.textContent = "🔍 搜索";
+        searchBtn.textContent = "搜索";
 
         if (data.error) {
           showError(data.error);
@@ -124,7 +124,7 @@
       } catch (err) {
         loading.classList.add("hidden");
         searchBtn.disabled = false;
-        searchBtn.textContent = "🔍 搜索";
+        searchBtn.textContent = "搜索";
         showError(`请求失败: ${err.message}`);
       }
     }
@@ -147,24 +147,24 @@
           }
         }
       }
-      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${c}</span>`).join("");
+      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
 
       const insights = data.insights || {};
       document.getElementById("insightsContent").innerHTML = `
         <div class="insight-section">
-          <h4>🔑 关键词</h4>
+          <h4>关键词</h4>
           <p>${escapeHtml(insights.keywords || "暂无")}</p>
         </div>
         <div class="insight-section">
-          <h4>📈 趋势研判</h4>
+          <h4>趋势研判</h4>
           <p>${escapeHtml(insights.trend || "暂无")}</p>
         </div>
         <div class="insight-section">
-          <h4>🎯 营销建议</h4>
+          <h4>营销建议</h4>
           <p>${escapeHtml(insights.marketing || "暂无")}</p>
         </div>
         <div class="insight-section">
-          <h4>👁️ 明日关注</h4>
+          <h4>明日关注</h4>
           <p>${escapeHtml(insights.tomorrow || "暂无")}</p>
         </div>
       `;
@@ -185,7 +185,7 @@
       newsList.innerHTML = "";
 
       if (items.length === 0) {
-        newsList.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:40px;">该分类下暂无新闻</p>';
+        newsList.innerHTML = '<div class="empty-state">该分类下暂无新闻</div>';
         return;
       }
 
@@ -208,7 +208,7 @@
           <p>${escapeHtml(r.abstract || "")}</p>
           <div class="news-meta">
             <span class="source">${escapeHtml(r.source || "未知来源")}</span>
-            ${dateStr ? `<span class="date">📅 ${dateStr}</span>` : ""}
+            ${dateStr ? `<span class="date">${dateStr}</span>` : ""}
           </div>
         `;
         newsList.appendChild(card);
@@ -238,9 +238,20 @@
       return div.innerHTML;
     }
 
+    async function readApiJson(res) {
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok) {
+        throw new Error(`接口返回 ${res.status}，请确认后端服务已连接`);
+      }
+      if (!contentType.includes("application/json")) {
+        throw new Error("接口未返回 JSON，请确认当前不是纯静态预览环境");
+      }
+      return res.json();
+    }
+
     function copyDailyContent() {
       if (!currentData || !currentData.results) {
-        alert("请先生成日报");
+        showToast("请先生成日报");
         return;
       }
       const dateStr = new Date().toLocaleDateString("zh-CN");
@@ -255,13 +266,33 @@
         text += `\n   链接: ${r.url}\n\n`;
       });
       navigator.clipboard.writeText(text).then(() => {
-        alert("日报内容已复制到剪贴板");
+        showToast("日报内容已复制");
       }).catch(() => {
-        alert("复制失败，请手动复制");
+        showToast("复制失败，请手动复制");
       });
     }
 
     document.getElementById("copyBtn").addEventListener("click", copyDailyContent);
+
+    function showToast(message) {
+      let toast = document.getElementById("toast");
+      if (!toast) {
+        toast = document.createElement("div");
+        toast.id = "toast";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+      }
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    const initialQuery = new URLSearchParams(location.search).get("q");
+    if (initialQuery) {
+      searchInput.value = initialQuery;
+      doSearch();
+    }
   </script>
 </body>
 </html>

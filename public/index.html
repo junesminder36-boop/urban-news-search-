@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="优码智库AI搜索站：聚合不动产、城市更新、竞品与招标资讯，辅助生成日报。">
   <title>优码智库AI搜索站</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -30,6 +31,13 @@
         <input type="text" id="homeSearchInput" placeholder="搜索城市更新、政策法规、招投标、物业管理...">
         <button id="homeSearchBtn">搜索</button>
       </div>
+      <div class="quick-keywords" aria-label="常用关键词">
+        <button type="button">城市更新</button>
+        <button type="button">智慧物业</button>
+        <button type="button">智慧园区</button>
+        <button type="button">城中村改造</button>
+        <button type="button">REITs</button>
+      </div>
     </div>
 
     <!-- 四个快捷入口 -->
@@ -44,7 +52,7 @@
       <a href="daily.html" class="nav-card glass-card">
         <span class="nav-icon">📋</span>
         <h3>行业日报</h3>
-        <p>地产、物业、园区、保障房等不动产行业每日精选</p>
+        <p>地产、物业、智慧园区等不动产行业每日精选</p>
         <span class="nav-status active">已上线</span>
       </a>
 
@@ -61,6 +69,49 @@
         <p>智慧城市、智慧物业、城市更新相关招投标信息</p>
         <span class="nav-status dev">开发中</span>
       </a>
+    </div>
+
+    <!-- 今日工作状态 -->
+    <div class="home-work-grid">
+      <div class="section-panel glass-card work-status-panel">
+        <div class="section-header">
+          <h2>今日更新状态</h2>
+        </div>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">资讯抓取</span>
+            <strong id="todayFetchStatus">检查中</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-label">日报状态</span>
+            <strong id="dailyReadyStatus">待生成</strong>
+          </div>
+          <div class="status-item">
+            <span class="status-label">更新时间</span>
+            <strong id="todayUpdateTime">--:--</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-panel glass-card action-panel">
+        <div class="section-header">
+          <h2>重点线索 / 待处理</h2>
+        </div>
+        <div class="todo-list">
+          <a href="city-update.html" class="todo-item">
+            <span>政策变化</span>
+            <strong>查看城市更新政策与地方案例</strong>
+          </a>
+          <a href="competitor.html" class="todo-item">
+            <span>竞品动态</span>
+            <strong>检查重点企业近7天动态</strong>
+          </a>
+          <a href="daily.html" class="todo-item">
+            <span>日报素材</span>
+            <strong>生成行业日报并复制要点</strong>
+          </a>
+        </div>
+      </div>
     </div>
 
     <!-- 今日重点资讯 -->
@@ -82,7 +133,7 @@
       <div class="section-header">
         <h2>🔥 今日关键词热度</h2>
       </div>
-      <div class="word-cloud" id="wordCloud"></div>
+      <div class="keyword-rank" id="wordCloud"></div>
     </div>
 
     <footer style="text-align: center; padding: 40px; color: rgba(255,255,255,0.25); font-size: 13px;">
@@ -94,7 +145,7 @@
   <div id="loginModal" class="login-modal hidden">
     <div class="login-content glass-card">
       <div class="login-header">
-        <h2>🔐 优码智库AI搜索站</h2>
+        <h2>优码智库AI搜索站</h2>
         <p>请输入账号密码访问优码智库</p>
       </div>
       <input type="text" id="loginUser" placeholder="账号" />
@@ -113,7 +164,7 @@
       const m = String(now.getMonth() + 1).padStart(2, '0');
       const d = String(now.getDate()).padStart(2, '0');
       const w = weekdays[now.getDay()];
-      document.getElementById("topDate").innerHTML = `<span style="background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.15); font-size: 14px; color: rgba(255,255,255,0.85);">${y}年${m}月${d}日 ${w}</span>`;
+      document.getElementById("topDate").innerHTML = `<span class="date-pill">${y}年${m}月${d}日 ${w}</span>`;
     }
     updateDate();
 
@@ -215,7 +266,7 @@
 
       try {
         const res = await fetch('/api/city-daily');
-        const data = await res.json();
+        const data = await readApiJson(res);
         if (data.error || !data.results || data.results.length === 0) {
           if (todayPollCount < MAX_TODAY_POLL) {
             todayPollTimer = setTimeout(fetchTodayNews, 20000);
@@ -241,12 +292,13 @@
 
     function showTodayEmpty() {
       todayListEl.innerHTML = `
-        <div style="text-align:center;padding:28px 0;">
-          <p style="color:rgba(255,255,255,0.4);margin-bottom:14px;">暂无今日资讯</p>
+        <div class="empty-inline">
+          <p>暂无今日资讯</p>
           <button class="section-toggle" id="todayRefresh">刷新</button>
         </div>
       `;
       todayToggle.style.display = 'none';
+      updateHomeStatus('暂无资讯', '待生成');
       document.getElementById('todayRefresh').addEventListener('click', () => {
         loadTodayNews();
       });
@@ -275,6 +327,7 @@
 
       todayToggle.textContent = todayExpanded ? '收起' : '查看更多';
       todayToggle.style.display = todayAll.length > 3 ? 'inline-block' : 'none';
+      updateHomeStatus(todayAll.length ? `${todayAll.length} 条资讯` : '暂无资讯', todayAll.length ? '可生成' : '待生成');
     }
 
     todayToggle.addEventListener('click', () => {
@@ -288,6 +341,17 @@
       return div.innerHTML;
     }
 
+    async function readApiJson(res) {
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok) {
+        throw new Error(`接口返回 ${res.status}`);
+      }
+      if (!contentType.includes('application/json')) {
+        throw new Error('接口未返回 JSON');
+      }
+      return res.json();
+    }
+
     function formatDate(iso) {
       try {
         const d = new Date(iso);
@@ -296,74 +360,78 @@
       } catch { return ''; }
     }
 
-    /* ===== 今日关键词热度词云（10个词，按热度从大到小） ===== */
+    function updateHomeStatus(fetchStatus, dailyStatus) {
+      const fetchEl = document.getElementById('todayFetchStatus');
+      const dailyEl = document.getElementById('dailyReadyStatus');
+      const timeEl = document.getElementById('todayUpdateTime');
+      if (fetchEl) fetchEl.textContent = fetchStatus;
+      if (dailyEl) dailyEl.textContent = dailyStatus;
+      if (timeEl) {
+        const now = new Date();
+        timeEl.textContent = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      }
+    }
+
+    /* ===== 今日关键词热度（按热度从高到低） ===== */
     const keywords = [
-      { text: '城市更新', weight: 10 },
-      { text: '城中村', weight: 9 },
-      { text: '数字化转型', weight: 9 },
-      { text: '政策法规', weight: 8 },
-      { text: '智慧物业', weight: 8 },
-      { text: '招投标', weight: 7 },
-      { text: '老旧小区', weight: 7 },
-      { text: '片区更新', weight: 6 },
-      { text: 'REITs', weight: 6 },
-      { text: '存量改造', weight: 6 }
+      { text: '城市更新', weight: 10, trend: '上升' },
+      { text: '城中村改造', weight: 9, trend: '上升' },
+      { text: '数字化转型', weight: 9, trend: '持平' },
+      { text: '政策法规', weight: 8, trend: '上升' },
+      { text: '智慧物业', weight: 8, trend: '持平' },
+      { text: '智慧园区', weight: 7, trend: '上升' },
+      { text: '招投标', weight: 7, trend: '上升' },
+      { text: 'REITs', weight: 6, trend: '持平' }
     ];
 
     function renderWordCloud() {
-      const container = document.getElementById('wordCloud');
-      const colors = [
-        'rgba(102,126,234,0.95)',
-        'rgba(168,85,247,0.95)',
-        'rgba(52,211,153,0.95)',
-        'rgba(251,191,36,0.95)',
-        'rgba(236,72,153,0.95)',
-        'rgba(96,165,250,0.95)',
-        'rgba(192,132,252,0.95)',
-        'rgba(248,113,113,0.95)',
-        'rgba(45,212,191,0.95)',
-        'rgba(250,204,21,0.95)'
-      ];
-
-      const sorted = [...keywords].sort((a, b) => b.weight - a.weight);
-
-      container.innerHTML = sorted.map((k, i) => {
-        const size = 14 + k.weight * 2.4;
-        const color = colors[i % colors.length];
-        const opacity = 0.55 + (k.weight / 10) * 0.45;
-        const rotate = (Math.random() - 0.5) * 8;
-        return `<span class="word-cloud-item" style="font-size:${size}px;color:${color};opacity:${opacity};transform:rotate(${rotate}deg)">${escapeHtml(k.text)}</span>`;
-      }).join('');
+      renderKeywordRank(keywords);
     }
 
     function renderDynamicWordCloud(dynamicKeywords) {
-      const container = document.getElementById('wordCloud');
       if (!dynamicKeywords || dynamicKeywords.length === 0) {
         renderWordCloud();
         return;
       }
 
-      const colors = [
-        'rgba(102,126,234,0.95)',
-        'rgba(168,85,247,0.95)',
-        'rgba(52,211,153,0.95)',
-        'rgba(251,191,36,0.95)',
-        'rgba(236,72,153,0.95)',
-        'rgba(96,165,250,0.95)',
-        'rgba(192,132,252,0.95)',
-        'rgba(248,113,113,0.95)',
-        'rgba(45,212,191,0.95)',
-        'rgba(250,204,21,0.95)'
-      ];
+      renderKeywordRank(dynamicKeywords.map((item, index) => ({
+        text: item.text,
+        weight: item.weight,
+        trend: item.trend || (index < 3 ? '上升' : '持平')
+      })));
+    }
 
-      const maxWeight = Math.max(...dynamicKeywords.map(k => k.weight));
-      container.innerHTML = dynamicKeywords.map((k, i) => {
-        const size = 14 + (k.weight / maxWeight) * 26;
-        const color = colors[i % colors.length];
-        const opacity = 0.55 + (k.weight / maxWeight) * 0.45;
-        const rotate = (Math.random() - 0.5) * 8;
-        return `<span class="word-cloud-item" style="font-size:${size}px;color:${color};opacity:${opacity};transform:rotate(${rotate}deg)">${escapeHtml(k.text)}</span>`;
+    function renderKeywordRank(items) {
+      const container = document.getElementById('wordCloud');
+      const sorted = [...items]
+        .filter(k => k.text && Number(k.weight) > 0)
+        .sort((a, b) => b.weight - a.weight)
+        .slice(0, 8);
+      const maxWeight = Math.max(...sorted.map(k => k.weight), 1);
+
+      container.innerHTML = sorted.map((k, i) => {
+        const percent = Math.max(18, Math.round((k.weight / maxWeight) * 100));
+        const trendClass = k.trend === '上升' ? 'up' : k.trend === '下降' ? 'down' : 'flat';
+        const trendText = k.trend === '上升' ? '↑ 上升' : k.trend === '下降' ? '↓ 下降' : '→ 持平';
+        return `
+          <button class="keyword-row" type="button" data-keyword="${escapeHtml(k.text)}">
+            <span class="keyword-index">${String(i + 1).padStart(2, '0')}</span>
+            <span class="keyword-main">
+              <span class="keyword-title">${escapeHtml(k.text)}</span>
+              <span class="keyword-bar"><i style="width:${percent}%"></i></span>
+            </span>
+            <span class="keyword-score">${Math.round(k.weight * 10)}</span>
+            <span class="keyword-trend ${trendClass}">${trendText}</span>
+          </button>
+        `;
       }).join('');
+
+      container.querySelectorAll('.keyword-row').forEach(row => {
+        row.addEventListener('click', () => {
+          homeSearchInput.value = row.dataset.keyword;
+          homeSearchInput.focus();
+        });
+      });
     }
 
     loadTodayNews();
@@ -373,9 +441,20 @@
     const homeSearchInput = document.getElementById('homeSearchInput');
     const homeSearchBtn = document.getElementById('homeSearchBtn');
 
+    document.querySelectorAll('.quick-keywords button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        homeSearchInput.value = btn.textContent.trim();
+        homeSearchInput.focus();
+      });
+    });
+
     homeSearchBtn.addEventListener('click', () => {
       const q = homeSearchInput.value.trim();
-      if (q) window.location.href = `daily.html?q=${encodeURIComponent(q)}`;
+      if (!q) {
+        homeSearchInput.focus();
+        return;
+      }
+      window.location.href = `daily.html?q=${encodeURIComponent(q)}`;
     });
 
     homeSearchInput.addEventListener('keydown', (e) => {

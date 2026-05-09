@@ -13,8 +13,8 @@ const categoryTabs = document.getElementById("categoryTabs");
 let currentData = null;
 let activeCategory = "all";
 
-searchBtn.addEventListener("click", doSearch);
-searchInput.addEventListener("keydown", (e) => {
+searchBtn?.addEventListener("click", doSearch);
+searchInput?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") doSearch();
 });
 
@@ -22,7 +22,7 @@ if (dailyBtn) {
   dailyBtn.addEventListener("click", doDaily);
 }
 
-categoryTabs.addEventListener("click", (e) => {
+categoryTabs?.addEventListener("click", (e) => {
   if (e.target.classList.contains("tab-btn")) {
     document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
     e.target.classList.add("active");
@@ -36,18 +36,18 @@ async function doSearch() {
   if (!query) return;
 
   searchBtn.disabled = true;
-  searchBtn.textContent = "搜索中...";
+  searchBtn.textContent = "搜索中";
   results.classList.add("hidden");
   error.classList.add("hidden");
   loading.classList.remove("hidden");
 
   try {
     const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
+    const data = await readApiJson(res);
 
     loading.classList.add("hidden");
     searchBtn.disabled = false;
-    searchBtn.textContent = "🔍 搜索";
+    searchBtn.textContent = "搜索";
 
     if (data.error) {
       showError(data.error);
@@ -60,7 +60,7 @@ async function doSearch() {
   } catch (err) {
     loading.classList.add("hidden");
     searchBtn.disabled = false;
-    searchBtn.textContent = "🔍 搜索";
+    searchBtn.textContent = "搜索";
     showError(`请求失败: ${err.message}`);
   }
 }
@@ -83,7 +83,7 @@ function renderResults(data) {
       }
     }
   }
-  statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${c}</span>`).join("");
+  statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
 
   if (data.summary) {
     summaryContent.textContent = data.summary;
@@ -98,12 +98,12 @@ function renderResults(data) {
       li.textContent = h;
       ul.appendChild(li);
     });
-    highlightsContent.innerHTML = "<h3>📌 关键要点</h3>";
+    highlightsContent.innerHTML = "<h3>关键要点</h3>";
     highlightsContent.appendChild(ul);
   } else if (data.raw) {
-    highlightsContent.innerHTML = `<h3>📌 AI 回复</h3><pre style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#555;">${escapeHtml(data.raw)}</pre>`;
+    highlightsContent.innerHTML = `<h3>AI 回复</h3><pre class="raw-response">${escapeHtml(data.raw)}</pre>`;
   } else {
-    highlightsContent.innerHTML = '<h3>📌 关键要点</h3><p style="color:#999;">暂无要点</p>';
+    highlightsContent.innerHTML = '<h3>关键要点</h3><p class="empty-note">暂无要点</p>';
   }
 
   renderNewsList();
@@ -122,7 +122,7 @@ function renderNewsList() {
   newsList.innerHTML = "";
 
   if (items.length === 0) {
-    newsList.innerHTML = `<p style="color:#fff;text-align:center;padding:40px;">该分类下暂无新闻</p>`;
+    newsList.innerHTML = `<div class="empty-state">该分类下暂无新闻</div>`;
     return;
   }
 
@@ -144,7 +144,7 @@ function renderNewsList() {
       <p>${escapeHtml(r.abstract || "暂无摘要")}</p>
       <div class="news-meta">
         <span class="source">${escapeHtml(r.source || "未知来源")}</span>
-        ${dateStr ? `<span class="date">📅 ${dateStr}</span>` : ""}
+        ${dateStr ? `<span class="date">${dateStr}</span>` : ""}
       </div>
     `;
     newsList.appendChild(card);
@@ -176,10 +176,21 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+async function readApiJson(res) {
+  const contentType = res.headers.get("content-type") || "";
+  if (!res.ok) {
+    throw new Error(`接口返回 ${res.status}，请确认后端服务已连接`);
+  }
+  if (!contentType.includes("application/json")) {
+    throw new Error("接口未返回 JSON，请确认当前不是纯静态预览环境");
+  }
+  return res.json();
+}
+
 async function doDaily() {
   if (!dailyBtn) return;
   dailyBtn.disabled = true;
-  dailyBtn.textContent = "📋 生成中...";
+  dailyBtn.textContent = "生成中";
   results.classList.add("hidden");
   error.classList.add("hidden");
   loading.classList.remove("hidden");
@@ -189,11 +200,11 @@ async function doDaily() {
     const isCityPage = document.title.includes("城市更新");
     const apiUrl = isCityPage ? "/api/city-daily" : "/api/daily";
     const res = await fetch(apiUrl);
-    const data = await res.json();
+    const data = await readApiJson(res);
 
     loading.classList.add("hidden");
     dailyBtn.disabled = false;
-    dailyBtn.textContent = "📋 一键生成日报";
+    dailyBtn.textContent = "一键生成日报";
 
     if (data.error) {
       showError(data.error);
@@ -206,7 +217,7 @@ async function doDaily() {
   } catch (err) {
     loading.classList.add("hidden");
     dailyBtn.disabled = false;
-    dailyBtn.textContent = "📋 一键生成日报";
+    dailyBtn.textContent = "一键生成日报";
     showError(`请求失败: ${err.message}`);
   }
 }
@@ -214,7 +225,7 @@ async function doDaily() {
 // 复制日报功能
 function copyDailyContent() {
   if (!currentData || !currentData.results) {
-    alert("请先生成日报");
+    showToast("请先生成日报");
     return;
   }
 
@@ -233,9 +244,9 @@ function copyDailyContent() {
   });
 
   navigator.clipboard.writeText(text).then(() => {
-    alert("日报内容已复制到剪贴板");
+    showToast("日报内容已复制");
   }).catch(() => {
-    alert("复制失败，请手动复制");
+    showToast("复制失败，请手动复制");
   });
 }
 
@@ -243,4 +254,24 @@ function copyDailyContent() {
 const copyBtn = document.getElementById("copyBtn");
 if (copyBtn) {
   copyBtn.addEventListener("click", copyDailyContent);
+}
+
+function showToast(message) {
+  let toast = document.getElementById("toast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "toast";
+    toast.className = "toast";
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+}
+
+const initialQuery = new URLSearchParams(location.search).get("q");
+if (initialQuery && searchInput) {
+  searchInput.value = initialQuery;
+  doSearch();
 }

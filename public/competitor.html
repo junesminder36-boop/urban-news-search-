@@ -137,11 +137,17 @@
       <p>追踪地产/物业数字化领域头部企业的近7天动态：产品发布、重大合同、战略合作、融资、上市、高管变动及招标信息</p>
     </header>
 
-    <h3 style="color: rgba(255,255,255,0.7); font-size: 16px; margin-bottom: 12px;">选择竞品公司（可多选）</h3>
+    <div class="panel-title-row">
+      <h3>选择竞品公司（可多选）</h3>
+      <div class="inline-actions">
+        <button id="selectAllBtn" type="button">全选</button>
+        <button id="clearBtn" type="button">清空</button>
+      </div>
+    </div>
     <div id="competitorGrid" class="competitor-grid"></div>
 
     <div class="competitor-actions">
-      <button id="generateBtn">🚀 一键生成竞品动态</button>
+      <button id="generateBtn">一键生成竞品动态</button>
       <span class="hint">默认搜索近7天动态，未选择则全部搜索</span>
     </div>
 
@@ -191,19 +197,35 @@
         <input type="checkbox" value="${name}" />
         <span>${name}</span>
       `;
-      item.addEventListener("click", (e) => {
-        if (e.target.tagName === "INPUT") {
-          const cb = e.target;
-          if (cb.checked) {
-            selected.add(cb.value);
-            item.classList.add("selected");
-          } else {
-            selected.delete(cb.value);
-            item.classList.remove("selected");
-          }
+      item.addEventListener("change", (e) => {
+        const cb = e.target;
+        if (cb.checked) {
+          selected.add(cb.value);
+          item.classList.add("selected");
+        } else {
+          selected.delete(cb.value);
+          item.classList.remove("selected");
         }
       });
       grid.appendChild(item);
+    });
+
+    document.getElementById("selectAllBtn").addEventListener("click", () => {
+      selected.clear();
+      document.querySelectorAll(".competitor-item").forEach((item) => {
+        const cb = item.querySelector("input");
+        cb.checked = true;
+        selected.add(cb.value);
+        item.classList.add("selected");
+      });
+    });
+
+    document.getElementById("clearBtn").addEventListener("click", () => {
+      selected.clear();
+      document.querySelectorAll(".competitor-item").forEach((item) => {
+        item.querySelector("input").checked = false;
+        item.classList.remove("selected");
+      });
     });
 
     const generateBtn = document.getElementById("generateBtn");
@@ -230,7 +252,7 @@
 
     async function doGenerate() {
       generateBtn.disabled = true;
-      generateBtn.textContent = "生成中...";
+      generateBtn.textContent = "生成中";
       results.classList.add("hidden");
       error.classList.add("hidden");
       loading.classList.remove("hidden");
@@ -243,11 +265,11 @@
         params.set("days", "7");
 
         const res = await fetch(`/api/competitor?${params.toString()}`);
-        const data = await res.json();
+        const data = await readApiJson(res);
 
         loading.classList.add("hidden");
         generateBtn.disabled = false;
-        generateBtn.textContent = "🚀 一键生成竞品动态";
+        generateBtn.textContent = "一键生成竞品动态";
 
         if (data.error) {
           showError(data.error);
@@ -259,7 +281,7 @@
       } catch (err) {
         loading.classList.add("hidden");
         generateBtn.disabled = false;
-        generateBtn.textContent = "🚀 一键生成竞品动态";
+        generateBtn.textContent = "一键生成竞品动态";
         showError(`请求失败: ${err.message}`);
       }
     }
@@ -275,7 +297,7 @@
           }
         }
       }
-      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条动态</span>` + catCounts.map((c) => `<span>${c}</span>`).join("");
+      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条动态</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
 
       renderNewsList();
     }
@@ -293,7 +315,7 @@
       newsList.innerHTML = "";
 
       if (items.length === 0) {
-        newsList.innerHTML = '<p style="color:rgba(255,255,255,0.3);text-align:center;padding:40px;">该分类下暂无动态</p>';
+        newsList.innerHTML = '<div class="empty-state">该分类下暂无动态</div>';
         return;
       }
 
@@ -318,7 +340,7 @@
           <p>${escapeHtml(r.abstract || "")}</p>
           <div class="news-meta">
             <span class="source">${escapeHtml(r.source || "未知来源")}</span>
-            ${dateStr ? `<span class="date">📅 ${dateStr}</span>` : ""}
+            ${dateStr ? `<span class="date">${dateStr}</span>` : ""}
           </div>
         `;
         newsList.appendChild(card);
@@ -346,6 +368,29 @@
       const div = document.createElement("div");
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    async function readApiJson(res) {
+      const contentType = res.headers.get("content-type") || "";
+      if (!res.ok) {
+        throw new Error(`接口返回 ${res.status}，请确认后端服务已连接`);
+      }
+      if (!contentType.includes("application/json")) {
+        throw new Error("接口未返回 JSON，请确认当前不是纯静态预览环境");
+      }
+      return res.json();
+    }
+
+    const initialQuery = new URLSearchParams(location.search).get("q");
+    if (initialQuery) {
+      document.querySelectorAll(".competitor-item input").forEach((cb) => {
+        if (cb.value.includes(initialQuery) || initialQuery.includes(cb.value)) {
+          cb.checked = true;
+          cb.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+      if (selected.size === 0) selected.add(initialQuery);
+      doGenerate();
     }
   </script>
 </body>
