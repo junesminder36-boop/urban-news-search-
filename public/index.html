@@ -177,6 +177,10 @@
     const todayListEl = document.getElementById('todayList');
     const todayToggle = document.getElementById('todayToggle');
 
+    let todayPollTimer = null;
+    let todayPollCount = 0;
+    const MAX_TODAY_POLL = 5;
+
     async function loadTodayNews() {
       const todayStr = new Date().toISOString().slice(0, 10);
       const cacheKey = 'youma_today_' + todayStr;
@@ -190,21 +194,50 @@
         } catch { /* ignore */ }
       }
 
+      todayPollCount = 0;
+      if (todayPollTimer) clearTimeout(todayPollTimer);
+      await fetchTodayNews();
+    }
+
+    async function fetchTodayNews() {
+      todayPollCount++;
+      todayListEl.innerHTML = `<div class="section-loading"><div class="spinner"></div><p>正在抓取今日资讯${todayPollCount > 1 ? '（' + todayPollCount + '/' + MAX_TODAY_POLL + '）' : ''}...</p></div>`;
+      todayToggle.style.display = 'none';
+
       try {
         const res = await fetch('/api/city-daily');
         const data = await res.json();
         if (data.error || !data.results || data.results.length === 0) {
-          todayListEl.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">暂无今日资讯</p>';
-          todayToggle.style.display = 'none';
+          if (todayPollCount < MAX_TODAY_POLL) {
+            todayPollTimer = setTimeout(fetchTodayNews, 20000);
+          } else {
+            showTodayEmpty();
+          }
           return;
         }
         todayAll = data.results;
-        localStorage.setItem(cacheKey, JSON.stringify(todayAll));
+        localStorage.setItem('youma_today_' + new Date().toISOString().slice(0, 10), JSON.stringify(todayAll));
         renderToday();
       } catch (err) {
-        todayListEl.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">加载失败，请稍后重试</p>';
-        todayToggle.style.display = 'none';
+        if (todayPollCount < MAX_TODAY_POLL) {
+          todayPollTimer = setTimeout(fetchTodayNews, 20000);
+        } else {
+          showTodayEmpty();
+        }
       }
+    }
+
+    function showTodayEmpty() {
+      todayListEl.innerHTML = `
+        <div style="text-align:center;padding:28px 0;">
+          <p style="color:rgba(255,255,255,0.4);margin-bottom:14px;">暂无今日资讯</p>
+          <button class="section-toggle" id="todayRefresh">刷新</button>
+        </div>
+      `;
+      todayToggle.style.display = 'none';
+      document.getElementById('todayRefresh').addEventListener('click', () => {
+        loadTodayNews();
+      });
     }
 
     function renderToday() {
