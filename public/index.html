@@ -13,7 +13,7 @@
       <button id="loginBtn" class="login-btn">登录</button>
     </div>
 
-    <header class="header" style="padding: 20px 48px 10px;">
+    <header class="header" style="padding: 20px 48px 0;">
       <h1>优码智库AI搜索站</h1>
       <p>智能聚合行业资讯、招标信息与分析报告</p>
     </header>
@@ -32,42 +32,34 @@
       </div>
     </div>
 
-    <!-- 四个快捷入口（横排小卡片） -->
+    <!-- 四个快捷入口 -->
     <div class="nav-grid">
       <a href="city-update.html" class="nav-card glass-card">
         <span class="nav-icon">🏙️</span>
-        <div class="nav-info">
-          <h3>城市更新日报</h3>
-          <p>政策、案例、数字化动态</p>
-          <span class="badge badge-active">已上线</span>
-        </div>
+        <h3>城市更新日报</h3>
+        <p>汇聚中央与地方城市更新政策、实践案例、数字化动态</p>
+        <span class="nav-status active">已上线</span>
       </a>
 
       <a href="daily.html" class="nav-card glass-card">
         <span class="nav-icon">📋</span>
-        <div class="nav-info">
-          <h3>行业日报</h3>
-          <p>地产、物业、园区精选</p>
-          <span class="badge badge-active">已上线</span>
-        </div>
+        <h3>行业日报</h3>
+        <p>地产、物业、园区、保障房等不动产行业每日精选</p>
+        <span class="nav-status active">已上线</span>
       </a>
 
       <a href="competitor.html" class="nav-card glass-card">
         <span class="nav-icon">🏢</span>
-        <div class="nav-info">
-          <h3>竞品动态</h3>
-          <p>房企物企数字化追踪</p>
-          <span class="badge badge-active">已上线</span>
-        </div>
+        <h3>竞品动态</h3>
+        <p>头部房企、物企、城服企业重点动态追踪</p>
+        <span class="nav-status active">已上线</span>
       </a>
 
       <a href="bidding.html" class="nav-card glass-card">
         <span class="nav-icon">📑</span>
-        <div class="nav-info">
-          <h3>招标信息</h3>
-          <p>智慧物业、工程招采</p>
-          <span class="badge badge-dev">开发中</span>
-        </div>
+        <h3>招标信息</h3>
+        <p>智慧城市、智慧物业、城市更新相关招投标信息</p>
+        <span class="nav-status dev">开发中</span>
       </a>
     </div>
 
@@ -186,6 +178,18 @@
     const todayToggle = document.getElementById('todayToggle');
 
     async function loadTodayNews() {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const cacheKey = 'youma_today_' + todayStr;
+      const cached = localStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          todayAll = JSON.parse(cached);
+          renderToday();
+          return;
+        } catch { /* ignore */ }
+      }
+
       try {
         const res = await fetch('/api/city-daily');
         const data = await res.json();
@@ -195,6 +199,7 @@
           return;
         }
         todayAll = data.results;
+        localStorage.setItem(cacheKey, JSON.stringify(todayAll));
         renderToday();
       } catch (err) {
         todayListEl.innerHTML = '<p style="color:rgba(255,255,255,0.4);padding:20px 0;">加载失败，请稍后重试</p>';
