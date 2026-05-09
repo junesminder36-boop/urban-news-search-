@@ -547,7 +547,8 @@ function formatAbstract(item) {
     const abs = item.abstract.trim();
     return abs.slice(0, 100) + (abs.length > 100 ? "..." : "");
   }
-  return "";
+  const title = item.title || "";
+  return title.slice(0, 80) + (title.length > 80 ? "..." : "");
 }
 
 function getChinaDateString() {
