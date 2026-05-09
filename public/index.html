@@ -188,8 +188,17 @@
 
       if (cached) {
         try {
-          todayAll = JSON.parse(cached);
-          renderToday();
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) {
+            // 兼容旧缓存格式
+            todayAll = parsed;
+            renderToday();
+            renderWordCloud();
+          } else {
+            todayAll = parsed.results || [];
+            renderToday();
+            renderDynamicWordCloud(parsed.keywords || []);
+          }
           return;
         } catch { /* ignore */ }
       }
@@ -216,8 +225,11 @@
           return;
         }
         todayAll = data.results;
-        localStorage.setItem('youma_today_' + new Date().toISOString().slice(0, 10), JSON.stringify(todayAll));
+        const keywords = data.keywords || [];
+        const cachePayload = { results: todayAll, keywords };
+        localStorage.setItem('youma_today_' + new Date().toISOString().slice(0, 10), JSON.stringify(cachePayload));
         renderToday();
+        renderDynamicWordCloud(keywords);
       } catch (err) {
         if (todayPollCount < MAX_TODAY_POLL) {
           todayPollTimer = setTimeout(fetchTodayNews, 20000);
@@ -319,6 +331,36 @@
         const size = 14 + k.weight * 2.4;
         const color = colors[i % colors.length];
         const opacity = 0.55 + (k.weight / 10) * 0.45;
+        const rotate = (Math.random() - 0.5) * 8;
+        return `<span class="word-cloud-item" style="font-size:${size}px;color:${color};opacity:${opacity};transform:rotate(${rotate}deg)">${escapeHtml(k.text)}</span>`;
+      }).join('');
+    }
+
+    function renderDynamicWordCloud(dynamicKeywords) {
+      const container = document.getElementById('wordCloud');
+      if (!dynamicKeywords || dynamicKeywords.length === 0) {
+        renderWordCloud();
+        return;
+      }
+
+      const colors = [
+        'rgba(102,126,234,0.95)',
+        'rgba(168,85,247,0.95)',
+        'rgba(52,211,153,0.95)',
+        'rgba(251,191,36,0.95)',
+        'rgba(236,72,153,0.95)',
+        'rgba(96,165,250,0.95)',
+        'rgba(192,132,252,0.95)',
+        'rgba(248,113,113,0.95)',
+        'rgba(45,212,191,0.95)',
+        'rgba(250,204,21,0.95)'
+      ];
+
+      const maxWeight = Math.max(...dynamicKeywords.map(k => k.weight));
+      container.innerHTML = dynamicKeywords.map((k, i) => {
+        const size = 14 + (k.weight / maxWeight) * 26;
+        const color = colors[i % colors.length];
+        const opacity = 0.55 + (k.weight / maxWeight) * 0.45;
         const rotate = (Math.random() - 0.5) * 8;
         return `<span class="word-cloud-item" style="font-size:${size}px;color:${color};opacity:${opacity};transform:rotate(${rotate}deg)">${escapeHtml(k.text)}</span>`;
       }).join('');

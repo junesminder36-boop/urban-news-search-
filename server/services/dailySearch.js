@@ -610,6 +610,57 @@ async function generateDailyReport(query, days = 3) {
   };
 }
 
+// ========== 动态关键词提取 ==========
+const KEYWORD_PATTERNS = {
+  '城市更新': ['城市更新'],
+  '老旧小区': ['老旧小区', '老旧小区改造'],
+  '城中村': ['城中村', '城中村改造'],
+  '片区更新': ['片区更新'],
+  '智慧物业': ['智慧物业'],
+  '数字化转型': ['数字化转型', '数字化'],
+  '政策法规': ['政策', '法规', '条例', '通知', '意见', '规划'],
+  '智慧社区': ['智慧社区'],
+  'REITs': ['REITs', 'REIT'],
+  '存量改造': ['存量改造', '存量'],
+  '碳中和': ['碳中和'],
+  'ESG': ['ESG'],
+  'TOD': ['TOD'],
+  '海绵城市': ['海绵城市'],
+  '产业园区': ['产业园区', '产业园'],
+  '保障房': ['保障房', '保障性住房'],
+  '招投标': ['招投标', '招标', '中标'],
+  '地产动态': ['地产', '房地产'],
+  '物业管理': ['物业管理', '物业'],
+  '有机更新': ['有机更新'],
+  '历史街区': ['历史街区'],
+  '微更新': ['微更新'],
+  'BIM': ['BIM'],
+  'CIM': ['CIM'],
+  '数字孪生': ['数字孪生'],
+  '物联感知': ['物联感知'],
+};
+
+function extractKeywords(items) {
+  const counts = {};
+  for (const [key, patterns] of Object.entries(KEYWORD_PATTERNS)) {
+    counts[key] = 0;
+    for (const item of items) {
+      const text = `${item.title || ''} ${item.abstract || ''}`.toLowerCase();
+      for (const p of patterns) {
+        const regex = new RegExp(p.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+        const matches = text.match(regex);
+        if (matches) counts[key] += matches.length;
+      }
+    }
+  }
+
+  return Object.entries(counts)
+    .filter(([_, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([text, count]) => ({ text, weight: Math.min(10, 4 + count) }));
+}
+
 // ========== 生成城市更新日报 ==========
 async function generateCityDailyReport(query, days = 3) {
   let [policyNews, localNews, practiceNews, digitalNews] = await Promise.all([
@@ -656,6 +707,10 @@ async function generateCityDailyReport(query, days = 3) {
     }
   });
 
+  // 从原始爬取数据（去重前）提取关键词，保证样本量
+  const rawAll = [...policyNews, ...localNews, ...practiceNews, ...digitalNews];
+  const keywords = extractKeywords(rawAll);
+
   return {
     total: all.length,
     categories,
@@ -667,6 +722,7 @@ async function generateCityDailyReport(query, days = 3) {
       pubDate: r.pubDate,
       category: r.category,
     })),
+    keywords,
     date: new Date().toISOString().split("T")[0],
   };
 }
