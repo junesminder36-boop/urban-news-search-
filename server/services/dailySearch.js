@@ -545,10 +545,10 @@ function categorizeCityDaily(item) {
 function formatAbstract(item) {
   if (item.abstract && item.abstract.trim().length > 0) {
     const abs = item.abstract.trim();
-    return abs.slice(0, 60) + (abs.length > 60 ? "..." : "");
+    return abs.slice(0, 35) + (abs.length > 35 ? "..." : "");
   }
   const title = item.title || "";
-  return title.slice(0, 40) + (title.length > 40 ? "..." : "");
+  return title.slice(0, 30) + (title.length > 30 ? "..." : "");
 }
 
 // ========== 生成行业日报 ==========

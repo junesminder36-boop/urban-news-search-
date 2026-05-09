@@ -353,6 +353,47 @@ if (refreshBtn) {
 }
 
 /* ===== Markdown 日报展示 ===== */
+function renderMarkdownToHtml(markdown) {
+  if (!markdown) return "";
+  const lines = markdown.split('\n');
+  const out = [];
+  let inPara = false;
+
+  function closePara() {
+    if (inPara) { out.push('</p>'); inPara = false; }
+  }
+
+  for (const rawLine of lines) {
+    const line = rawLine.replace(/\r/g, '');
+    if (line.startsWith('# ')) {
+      closePara();
+      out.push(`<h1>${escapeHtml(line.slice(2))}</h1>`);
+    } else if (line.startsWith('## ')) {
+      closePara();
+      out.push(`<h2>${escapeHtml(line.slice(3))}</h2>`);
+    } else if (line.startsWith('> ')) {
+      closePara();
+      let content = escapeHtml(line.slice(2));
+      content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      out.push(`<div class="md-quote">${content}</div>`);
+    } else if (/^[━]+$/.test(line.trim())) {
+      closePara();
+      out.push('<hr>');
+    } else if (line.trim() === '') {
+      closePara();
+    } else {
+      if (!inPara) { out.push('<p>'); inPara = true; }
+      let content = escapeHtml(line);
+      content = content.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+      out.push(content + '<br>');
+    }
+  }
+  closePara();
+  return out.join('');
+}
+
 function showMarkdownReport() {
   if (!currentData || !currentData.dailyReport) {
     showToast("请先生成今日新闻");
@@ -361,7 +402,7 @@ function showMarkdownReport() {
   const mdReport = document.getElementById("markdownReport");
   const mdContent = document.getElementById("markdownContent");
   if (mdReport && mdContent) {
-    mdContent.textContent = currentData.dailyReport;
+    mdContent.innerHTML = renderMarkdownToHtml(currentData.dailyReport);
     mdReport.classList.remove("hidden");
     mdReport.scrollIntoView({ behavior: "smooth", block: "start" });
   }
