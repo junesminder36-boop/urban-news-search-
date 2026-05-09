@@ -545,7 +545,7 @@ function categorizeCityDaily(item) {
 function formatAbstract(item) {
   if (item.abstract && item.abstract.trim().length > 0) {
     const abs = item.abstract.trim();
-    return abs.slice(0, 100) + (abs.length > 100 ? "..." : "");
+    return abs.slice(0, 200) + (abs.length > 200 ? "..." : "");
   }
   const title = item.title || "";
   return title.slice(0, 80) + (title.length > 80 ? "..." : "");

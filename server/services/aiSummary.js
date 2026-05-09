@@ -84,4 +84,66 @@ async function summarizeNews(query, articles, customSystemPrompt) {
   }
 }
 
-module.exports = { summarizeNews };
+async function summarizeArticles(articles) {
+  if (!API_KEY || articles.length === 0) {
+    return articles.map((a) => a.abstract || "");
+  }
+
+  const context = articles
+    .map((a, i) => `${i + 1}. 《${a.title}》\n   原始摘要：${(a.abstract || "").slice(0, 120)}`)
+    .join("\n\n");
+
+  const systemPrompt = `你是一位城市更新领域资深新闻编辑。请根据提供的新闻标题和原始摘要，为每条新闻撰写一段 30-40 字的核心摘要。
+
+要求：
+1. 摘要必须是对新闻核心内容的提炼总结，突出政策意义、实践亮点或行业影响
+2. 不要简单重复标题或引用原文开头
+3. 语言简洁专业，适合行业日报使用
+4. 严格按编号返回，每条一行`;
+
+  const userPrompt = `请为以下新闻各写一段 30-40 字摘要：\n\n${context}\n\n请严格按以下格式返回（只输出摘要，不要解释）：\n1. [摘要内容]\n2. [摘要内容]\n...`;
+
+  try {
+    const res = await axios.post(
+      API_URL,
+      {
+        model: MODEL,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.6,
+        max_tokens: 2048,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${API_KEY}`,
+        },
+        timeout: 90000,
+      }
+    );
+
+    const text = res.data.choices?.[0]?.message?.content || "";
+
+    const summaries = [];
+    const lines = text.split("\n");
+    for (const line of lines) {
+      const match = line.match(/^\d+\.\s*(.+)/);
+      if (match) {
+        summaries.push(match[1].trim());
+      }
+    }
+
+    while (summaries.length < articles.length) {
+      summaries.push(articles[summaries.length]?.abstract || "");
+    }
+
+    return summaries.slice(0, articles.length);
+  } catch (err) {
+    console.error("AI 摘要生成失败:", err.message);
+    return articles.map((a) => a.abstract || "");
+  }
+}
+
+module.exports = { summarizeNews, summarizeArticles };

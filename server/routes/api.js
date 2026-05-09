@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { searchAll } = require("../services/search");
 const { batchFetch } = require("../services/crawler");
-const { summarizeNews } = require("../services/aiSummary");
+const { summarizeNews, summarizeArticles } = require("../services/aiSummary");
 const { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown } = require("../services/dailySearch");
 const { generateCompetitorReport } = require("../services/competitorSearch");
 const { generateInsights } = require("../services/dailyInsights");
@@ -94,6 +94,22 @@ router.get("/city-daily", async (req, res) => {
   try {
     const { q } = req.query;
     const report = await generateCityDailyReport(q);
+
+    // AI 为每条新闻生成精炼摘要
+    const aiAbstracts = await summarizeArticles(report.results);
+    report.results.forEach((r, i) => {
+      if (aiAbstracts[i]) {
+        r.abstract = aiAbstracts[i];
+      }
+    });
+    Object.values(report.categories).forEach((catItems) => {
+      catItems.forEach((item) => {
+        const idx = report.results.findIndex((r) => r.url === item.url);
+        if (idx >= 0 && aiAbstracts[idx]) {
+          item.abstract = aiAbstracts[idx];
+        }
+      });
+    });
 
     const cityDailySystemPrompt = `你是一位城市更新领域的新闻分析师。请根据提供的今日新闻素材，完成以下任务：
 1. 撰写一段 80-120 字的综合摘要，凝练当日城市更新领域核心动向
