@@ -574,6 +574,20 @@ async function generateDailyReport(query, days = 3) {
 
   let all = [...policyNews, ...industryNews, ...enterpriseNews];
 
+  // 搜索引擎返回为空时，回退到 RSS
+  if (all.length === 0) {
+    const { fetchRSSFeeds } = require("./rssFeeds");
+    const rssItems = await fetchRSSFeeds(query || "物业 地产 园区");
+    all = rssItems.map((item) => ({
+      title: item.title,
+      link: item.link,
+      abstract: item.abstract || "",
+      source: item.source || "",
+      pubDate: item.pubDate,
+      category: item.category || "行业要闻精选",
+    }));
+  }
+
   // 按日期过滤
   all = filterByDate(all, days);
 
@@ -686,6 +700,20 @@ async function generateCityDailyReport(query, days = 3) {
   }
 
   let all = [...policyNews, ...localNews, ...practiceNews, ...digitalNews];
+
+  // 搜索引擎返回为空时，回退到 RSS
+  if (all.length === 0) {
+    const { fetchRSSFeeds } = require("./rssFeeds");
+    const rssItems = await fetchRSSFeeds(query || "城市更新");
+    all = rssItems.map((item) => ({
+      title: item.title,
+      link: item.link,
+      abstract: item.abstract || "",
+      source: item.source || "",
+      pubDate: item.pubDate,
+      category: item.category || "行业观点",
+    }));
+  }
 
   // 按日期过滤，如果近3天没有结果则保留全部
   const filtered = filterByDate(all, days);
