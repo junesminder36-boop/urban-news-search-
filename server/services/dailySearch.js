@@ -610,6 +610,24 @@ async function generateDailyReport(query, days = 3) {
     }
   }
 
+  // 全部为空时，使用 search.js 的聚合搜索作为最后回退
+  if (all.length === 0) {
+    try {
+      const { searchAll } = require("./search");
+      const fallback = await searchAll(query || "物业 地产 园区");
+      all = fallback.map((item) => ({
+        title: item.title,
+        link: item.link || item.url,
+        abstract: item.abstract || "",
+        source: item.source || "",
+        pubDate: item.pubDate,
+        category: item.category || "行业要闻精选",
+      }));
+    } catch (e) {
+      console.error("聚合搜索回退失败:", e.message);
+    }
+  }
+
   // 按日期过滤
   all = filterByDate(all, days);
 
@@ -756,6 +774,24 @@ async function generateCityDailyReport(query, days = 3) {
       }));
     } catch (e) {
       console.error("定向爬取回退失败:", e.message);
+    }
+  }
+
+  // 全部为空时，使用 search.js 的聚合搜索作为最后回退
+  if (all.length === 0) {
+    try {
+      const { searchAll } = require("./search");
+      const fallback = await searchAll(query || "城市更新");
+      all = fallback.map((item) => ({
+        title: item.title,
+        link: item.link || item.url,
+        abstract: item.abstract || "",
+        source: item.source || "",
+        pubDate: item.pubDate,
+        category: item.category || "行业观点",
+      }));
+    } catch (e) {
+      console.error("聚合搜索回退失败:", e.message);
     }
   }
 
