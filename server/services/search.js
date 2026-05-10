@@ -307,8 +307,9 @@ function autoCategorize(item) {
 }
 
 async function searchAll(keyword) {
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  threeDaysAgo.setHours(0, 0, 0, 0);
 
   const [rssResults, targetedResults, baiduResults, sogouResults, bingResults, yahooResults] = await Promise.all([
     fetchRSSFeeds(keyword).catch((e) => { console.error("RSS失败:", e.message); return []; }),
@@ -349,10 +350,16 @@ async function searchAll(keyword) {
     unique.push(item);
   }
 
-  // 按日期排序
-  unique.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+  // 按日期过滤（只保留近3天）
+  const recent = unique.filter((item) => {
+    const d = new Date(item.pubDate);
+    return d >= threeDaysAgo;
+  });
 
-  return unique.slice(0, 30);
+  // 按日期排序
+  recent.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
+
+  return recent.slice(0, 30);
 }
 
 module.exports = { searchAll };

@@ -58,8 +58,9 @@ const cheerio = require("cheerio");
 async function fetchRSSFeeds(query) {
   const allItems = [];
   const queryLower = query.toLowerCase();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  threeDaysAgo.setHours(0, 0, 0, 0);
 
   const settled = await Promise.all(RSS_SOURCES.map(async (source) => {
     const startedAt = Date.now();
@@ -95,9 +96,9 @@ async function fetchRSSFeeds(query) {
         const isMatch = text.includes(queryLower) ||
           ["城市更新", "旧改", "城中村", "棚改", "老旧小区", "城市改造", "有机更新", "微更新"].some((k) => text.includes(k));
 
-        // 时间过滤（近7天）
+        // 时间过滤（近3天）
         const itemDate = item.pubDate ? new Date(item.pubDate) : new Date();
-        const isRecent = itemDate >= sevenDaysAgo;
+        const isRecent = itemDate >= threeDaysAgo;
 
         return isMatch && isRecent;
       });

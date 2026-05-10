@@ -202,8 +202,9 @@ function parseGovDate(dateStr) {
 async function crawlTargetedSites(query) {
   const allItems = [];
   const queryLower = query.toLowerCase();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  threeDaysAgo.setHours(0, 0, 0, 0);
 
   for (const site of TARGET_SITES) {
     try {
@@ -213,7 +214,7 @@ async function crawlTargetedSites(query) {
         const isMatch = text.includes(queryLower) ||
           ["城市更新", "旧改", "城中村", "棚改", "老旧小区", "城市改造", "有机更新", "微更新"].some((k) => text.includes(k));
         const itemDate = item.pubDate ? new Date(item.pubDate) : new Date();
-        return isMatch && itemDate >= sevenDaysAgo;
+        return isMatch && itemDate >= threeDaysAgo;
       });
       allItems.push(...filtered);
     } catch (err) {
