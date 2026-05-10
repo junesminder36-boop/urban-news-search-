@@ -93,7 +93,7 @@ async function summarizeArticles(articles) {
     .map((a, i) => `${i + 1}. 《${a.title}》\n   原始摘要：${(a.abstract || "").slice(0, 120)}`)
     .join("\n\n");
 
-  const systemPrompt = `你是一位城市更新领域资深新闻编辑。请根据提供的新闻标题和原始摘要，为每条新闻撰写一段 30-40 字的核心摘要。
+  const systemPrompt = `你是一位城市更新领域资深新闻编辑。请根据提供的新闻标题和原始摘要，为每条新闻撰写一段 60-80 字的核心摘要。
 
 要求：
 1. 摘要必须是对新闻核心内容的提炼总结，突出政策意义、实践亮点或行业影响
@@ -101,7 +101,7 @@ async function summarizeArticles(articles) {
 3. 语言简洁专业，适合行业日报使用
 4. 严格按编号返回，每条一行`;
 
-  const userPrompt = `请为以下新闻各写一段 30-40 字摘要：\n\n${context}\n\n请严格按以下格式返回（只输出摘要，不要解释）：\n1. [摘要内容]\n2. [摘要内容]\n...`;
+  const userPrompt = `请为以下新闻各写一段 60-80 字摘要：\n\n${context}\n\n请严格按以下格式返回（只输出摘要，不要解释）：\n1. [摘要内容]\n2. [摘要内容]\n...`;
 
   try {
     const res = await axios.post(
