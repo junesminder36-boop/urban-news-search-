@@ -576,16 +576,38 @@ async function generateDailyReport(query, days = 3) {
 
   // 搜索引擎返回为空时，回退到 RSS
   if (all.length === 0) {
-    const { fetchRSSFeeds } = require("./rssFeeds");
-    const rssItems = await fetchRSSFeeds(query || "物业 地产 园区");
-    all = rssItems.map((item) => ({
-      title: item.title,
-      link: item.link,
-      abstract: item.abstract || "",
-      source: item.source || "",
-      pubDate: item.pubDate,
-      category: item.category || "行业要闻精选",
-    }));
+    try {
+      const { fetchRSSFeeds } = require("./rssFeeds");
+      const rssItems = await fetchRSSFeeds(query || "物业 地产 园区");
+      all = rssItems.map((item) => ({
+        title: item.title,
+        link: item.link,
+        abstract: item.abstract || "",
+        source: item.source || "",
+        pubDate: item.pubDate,
+        category: item.category || "行业要闻精选",
+      }));
+    } catch (e) {
+      console.error("RSS 回退失败:", e.message);
+    }
+  }
+
+  // RSS 也为空时，回退到定向爬取政府网站
+  if (all.length === 0) {
+    try {
+      const { crawlTargetedSites } = require("./targetedCrawler");
+      const crawled = await crawlTargetedSites(query || "城市更新");
+      all = crawled.map((item) => ({
+        title: item.title,
+        link: item.link,
+        abstract: item.abstract || "",
+        source: item.source || "",
+        pubDate: item.pubDate,
+        category: item.category || "政策法规速递",
+      }));
+    } catch (e) {
+      console.error("定向爬取回退失败:", e.message);
+    }
   }
 
   // 按日期过滤
@@ -703,16 +725,38 @@ async function generateCityDailyReport(query, days = 3) {
 
   // 搜索引擎返回为空时，回退到 RSS
   if (all.length === 0) {
-    const { fetchRSSFeeds } = require("./rssFeeds");
-    const rssItems = await fetchRSSFeeds(query || "城市更新");
-    all = rssItems.map((item) => ({
-      title: item.title,
-      link: item.link,
-      abstract: item.abstract || "",
-      source: item.source || "",
-      pubDate: item.pubDate,
-      category: item.category || "行业观点",
-    }));
+    try {
+      const { fetchRSSFeeds } = require("./rssFeeds");
+      const rssItems = await fetchRSSFeeds(query || "城市更新");
+      all = rssItems.map((item) => ({
+        title: item.title,
+        link: item.link,
+        abstract: item.abstract || "",
+        source: item.source || "",
+        pubDate: item.pubDate,
+        category: item.category || "行业观点",
+      }));
+    } catch (e) {
+      console.error("RSS 回退失败:", e.message);
+    }
+  }
+
+  // RSS 也为空时，回退到定向爬取政府网站
+  if (all.length === 0) {
+    try {
+      const { crawlTargetedSites } = require("./targetedCrawler");
+      const crawled = await crawlTargetedSites(query || "城市更新");
+      all = crawled.map((item) => ({
+        title: item.title,
+        link: item.link,
+        abstract: item.abstract || "",
+        source: item.source || "",
+        pubDate: item.pubDate,
+        category: item.category || "地方政策",
+      }));
+    } catch (e) {
+      console.error("定向爬取回退失败:", e.message);
+    }
   }
 
   // 按日期过滤，如果近3天没有结果则保留全部
