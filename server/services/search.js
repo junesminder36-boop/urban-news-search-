@@ -53,6 +53,10 @@ function isValidResult(item) {
   const questionPatterns = [/^什么是/, /^怎么/, /^如何/, /^为什么/, /\?$/];
   if (questionPatterns.some((p) => p.test(title))) return false;
 
+  // 过滤纯英文/外文结果：标题中汉字少于3个视为非中文内容
+  const chineseChars = title.replace(/[^一-龥]/g, "");
+  if (chineseChars.length < 3) return false;
+
   return true;
 }
 
@@ -311,17 +315,16 @@ async function searchAll(keyword) {
   threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
   threeDaysAgo.setHours(0, 0, 0, 0);
 
-  const [rssResults, targetedResults, baiduResults, sogouResults, bingResults, yahooResults] = await Promise.all([
+  const [rssResults, targetedResults, baiduResults, sogouResults, bingResults] = await Promise.all([
     fetchRSSFeeds(keyword).catch((e) => { console.error("RSS失败:", e.message); return []; }),
     crawlTargetedSites(keyword).catch((e) => { console.error("定向爬取失败:", e.message); return []; }),
     searchBaiduNews(keyword).catch((e) => { console.error("百度新闻失败:", e.message); return []; }),
     searchSogouNews(keyword).catch((e) => { console.error("搜狗新闻失败:", e.message); return []; }),
     searchBingNews(keyword).catch((e) => { console.error("Bing新闻失败:", e.message); return []; }),
-    searchYahooNews(keyword).catch((e) => { console.error("Yahoo新闻失败:", e.message); return []; }),
   ]);
 
-  // 合并所有来源
-  const all = [...rssResults, ...targetedResults, ...baiduResults, ...sogouResults, ...bingResults, ...yahooResults];
+  // 合并所有来源（Yahoo 已移除：search.yahoo.com 对中文关键词返回大量英文结果）
+  const all = [...rssResults, ...targetedResults, ...baiduResults, ...sogouResults, ...bingResults];
 
   // 去重（基于标题相似度）
   const seen = new Set();
