@@ -69,6 +69,23 @@ router.get("/daily", async (req, res) => {
   try {
     const { q } = req.query;
     const report = await generateDailyReport(q);
+
+    // AI 为每条新闻生成精炼摘要
+    const aiAbstracts = await summarizeArticles(report.results);
+    report.results.forEach((r, i) => {
+      if (aiAbstracts[i]) {
+        r.abstract = aiAbstracts[i];
+      }
+    });
+    Object.values(report.categories).forEach((catItems) => {
+      catItems.forEach((item) => {
+        const idx = report.results.findIndex((r) => r.url === item.url);
+        if (idx >= 0 && aiAbstracts[idx]) {
+          item.abstract = aiAbstracts[idx];
+        }
+      });
+    });
+
     const insights = await generateInsights(report.results, ENTERPRISES);
 
     res.json({
