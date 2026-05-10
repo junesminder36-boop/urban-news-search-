@@ -2,6 +2,8 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const { fetchRSSFeeds } = require("./rssFeeds");
 const { crawlTargetedSites } = require("./targetedCrawler");
+const HTTP_TIMEOUT = Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000);
+const RESOLVE_BAIDU_LINKS = process.env.RESOLVE_BAIDU_LINKS === "true";
 
 function isValidResult(item) {
   const title = item.title || "";
@@ -58,7 +60,7 @@ async function resolveBaiduLink(baiduUrl) {
   try {
     const res = await axios.get(baiduUrl, {
       maxRedirects: 5,
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml",
@@ -90,6 +92,22 @@ function extractSourceFromUrl(url) {
   }
 }
 
+function extractYahooUrl(url) {
+  try {
+    const match = url.match(/\/RU=([^/]+)/);
+    return match ? decodeURIComponent(match[1]) : url;
+  } catch {
+    return url;
+  }
+}
+
+function cleanYahooTitle(text) {
+  return (text || "")
+    .replace(/^.*›\s*[^\u4e00-\u9fa5A-Za-z]*/, "")
+    .replace(/^[A-Za-z0-9_./-]+(?=[\u4e00-\u9fa5])/, "")
+    .trim();
+}
+
 async function searchBaiduNews(keyword) {
   try {
     const url = `https://www.baidu.com/s?wd=${encodeURIComponent(keyword + " 新闻")}&tn=news&rtt=4`;
@@ -99,7 +117,7 @@ async function searchBaiduNews(keyword) {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
     });
 
     const $ = cheerio.load(res.data);
@@ -133,13 +151,15 @@ async function searchBaiduNews(keyword) {
       }
     });
 
-    const resolved = await Promise.all(
-      results.map(async (r) => {
-        const realUrl = await resolveBaiduLink(r.link);
-        const realSource = extractSourceFromUrl(realUrl);
-        return { ...r, link: realUrl, source: realSource || r.source };
-      })
-    );
+    const resolved = RESOLVE_BAIDU_LINKS
+      ? await Promise.all(
+          results.slice(0, 4).map(async (r) => {
+            const realUrl = await resolveBaiduLink(r.link);
+            const realSource = extractSourceFromUrl(realUrl);
+            return { ...r, link: realUrl, source: realSource || r.source };
+          })
+        )
+      : results;
 
     return resolved.filter(isValidResult).slice(0, 8);
   } catch (err) {
@@ -156,7 +176,7 @@ async function searchSogouNews(keyword) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
     });
     const $ = cheerio.load(res.data);
     const results = [];
@@ -184,7 +204,7 @@ async function searchBingNews(keyword) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
     });
     const $ = cheerio.load(res.data);
     const results = [];
@@ -200,6 +220,37 @@ async function searchBingNews(keyword) {
     return results.filter(isValidResult).slice(0, 8);
   } catch (err) {
     console.error("Bing新闻搜索失败:", err.message);
+    return [];
+  }
+}
+
+async function searchYahooNews(keyword) {
+  try {
+    const url = `https://search.yahoo.com/search?p=${encodeURIComponent(keyword + " 新闻")}`;
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+      },
+      timeout: HTTP_TIMEOUT,
+    });
+    const $ = cheerio.load(res.data);
+    const results = [];
+    $(".dd.algo").each((_, el) => {
+      const linkEl = $(el).find(".compTitle a").first();
+      const rawTitle = linkEl.text().trim();
+      const title = cleanYahooTitle(rawTitle);
+      const rawLink = linkEl.attr("href");
+      const link = rawLink ? extractYahooUrl(rawLink) : "";
+      const abstract = $(el).find(".compText, .abstract, p").first().text().trim().replace(/\s+/g, " ");
+      const source = extractSourceFromUrl(link) || "Yahoo搜索";
+      if (title && link) {
+        results.push({ title, link, abstract, source, pubDate: new Date().toISOString() });
+      }
+    });
+    return results.filter(isValidResult).slice(0, 8);
+  } catch (err) {
+    console.error("Yahoo新闻搜索失败:", err.message);
     return [];
   }
 }
@@ -259,16 +310,17 @@ async function searchAll(keyword) {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  const [rssResults, targetedResults, baiduResults, sogouResults, bingResults] = await Promise.all([
+  const [rssResults, targetedResults, baiduResults, sogouResults, bingResults, yahooResults] = await Promise.all([
     fetchRSSFeeds(keyword).catch((e) => { console.error("RSS失败:", e.message); return []; }),
     crawlTargetedSites(keyword).catch((e) => { console.error("定向爬取失败:", e.message); return []; }),
     searchBaiduNews(keyword).catch((e) => { console.error("百度新闻失败:", e.message); return []; }),
     searchSogouNews(keyword).catch((e) => { console.error("搜狗新闻失败:", e.message); return []; }),
     searchBingNews(keyword).catch((e) => { console.error("Bing新闻失败:", e.message); return []; }),
+    searchYahooNews(keyword).catch((e) => { console.error("Yahoo新闻失败:", e.message); return []; }),
   ]);
 
   // 合并所有来源
-  const all = [...rssResults, ...targetedResults, ...baiduResults, ...sogouResults, ...bingResults];
+  const all = [...rssResults, ...targetedResults, ...baiduResults, ...sogouResults, ...bingResults, ...yahooResults];
 
   // 去重（基于标题相似度）
   const seen = new Set();

@@ -8,6 +8,35 @@ const { generateCompetitorReport } = require("../services/competitorSearch");
 const { generateInsights } = require("../services/dailyInsights");
 const { ENTERPRISES } = require("../services/dailySearch");
 
+const ROUTE_TIMEOUT = Number(process.env.ROUTE_TIMEOUT_MS || 55000);
+const AI_TIMEOUT = Number(process.env.AI_TIMEOUT_MS || 18000);
+
+async function withTimeout(promise, ms, label, fallback) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms);
+      }),
+    ]);
+  } catch (err) {
+    console.error(`${label} 超时/失败:`, err.message);
+    if (fallback !== undefined) return fallback;
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+router.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    service: "urban-news-search",
+    time: new Date().toISOString(),
+  });
+});
+
 router.get("/search", async (req, res) => {
   const { q } = req.query;
   if (!q || !q.trim()) {
@@ -15,7 +44,7 @@ router.get("/search", async (req, res) => {
   }
 
   try {
-    const results = await searchAll(q.trim());
+    const results = await withTimeout(searchAll(q.trim()), ROUTE_TIMEOUT, "搜索聚合", []);
 
     const normalizedResults = results.map((r) => {
       const abstract = generateAbstract(r);
@@ -47,8 +76,14 @@ router.get("/search", async (req, res) => {
     });
 
     const urls = normalizedResults.slice(0, 8).map((r) => r.url).filter(Boolean);
-    const articles = await batchFetch(urls);
-    const aiResult = await summarizeNews(q.trim(), articles);
+    const articles = await withTimeout(batchFetch(urls), 18000, "正文抓取", []);
+    const aiResult = articles.length > 0
+      ? await withTimeout(summarizeNews(q.trim(), articles), AI_TIMEOUT, "AI搜索总结", {
+          summary: "AI 总结暂不可用，已返回新闻列表。",
+          highlights: [],
+          raw: "",
+        })
+      : { summary: "暂无可用于 AI 总结的正文内容，已返回搜索结果列表。", highlights: [], raw: "" };
 
     res.json({
       query: q.trim(),
@@ -68,10 +103,18 @@ router.get("/search", async (req, res) => {
 router.get("/daily", async (req, res) => {
   try {
     const { q } = req.query;
-    const report = await generateDailyReport(q);
+    const report = await withTimeout(generateDailyReport(q), ROUTE_TIMEOUT, "行业日报抓取", {
+      total: 0,
+      categories: { "政策法规速递": [], "行业要闻精选": [], "企业动态精选": [] },
+      results: [],
+      date: new Date().toISOString().slice(0, 10),
+      sourceStatus: [{ name: "行业日报抓取", status: "timeout", count: 0, error: "整体抓取超时" }],
+    });
 
     // AI 为每条新闻生成精炼摘要
-    const aiAbstracts = await summarizeArticles(report.results);
+    const aiAbstracts = report.results.length > 0
+      ? await withTimeout(summarizeArticles(report.results), AI_TIMEOUT, "AI新闻摘要", report.results.map((r) => r.abstract || ""))
+      : [];
     report.results.forEach((r, i) => {
       if (aiAbstracts[i]) {
         r.abstract = aiAbstracts[i];
@@ -86,7 +129,9 @@ router.get("/daily", async (req, res) => {
       });
     });
 
-    const insights = await generateInsights(report.results, ENTERPRISES);
+    const insights = report.results.length > 0
+      ? await withTimeout(generateInsights(report.results, ENTERPRISES), AI_TIMEOUT, "AI洞察", {})
+      : {};
 
     res.json({
       ...report,
@@ -110,10 +155,19 @@ function generateAbstract(item) {
 router.get("/city-daily", async (req, res) => {
   try {
     const { q } = req.query;
-    const report = await generateCityDailyReport(q);
+    const report = await withTimeout(generateCityDailyReport(q), ROUTE_TIMEOUT, "城市更新日报抓取", {
+      total: 0,
+      categories: { "中央政策": [], "地方政策": [], "地方实践案例": [], "城市更新数字化": [], "行业观点": [] },
+      results: [],
+      keywords: [],
+      date: new Date().toISOString().slice(0, 10),
+      sourceStatus: [{ name: "城市更新日报抓取", status: "timeout", count: 0, error: "整体抓取超时" }],
+    });
 
     // AI 为每条新闻生成精炼摘要
-    const aiAbstracts = await summarizeArticles(report.results);
+    const aiAbstracts = report.results.length > 0
+      ? await withTimeout(summarizeArticles(report.results), AI_TIMEOUT, "AI新闻摘要", report.results.map((r) => r.abstract || ""))
+      : [];
     report.results.forEach((r, i) => {
       if (aiAbstracts[i]) {
         r.abstract = aiAbstracts[i];
@@ -142,7 +196,12 @@ router.get("/city-daily", async (req, res) => {
 3. ...
 `;
 
-    const aiResult = await summarizeNews("城市更新日报", report.results, cityDailySystemPrompt);
+    const aiResult = report.results.length > 0
+      ? await withTimeout(summarizeNews("城市更新日报", report.results, cityDailySystemPrompt), AI_TIMEOUT, "AI城市更新总结", {
+          summary: "AI 总结暂不可用，已返回新闻列表。",
+          highlights: [],
+        })
+      : { summary: "今日暂未抓取到城市更新新闻。", highlights: [] };
     const dailyReport = generateCityDailyMarkdown(report.results, report.date);
 
     res.json({

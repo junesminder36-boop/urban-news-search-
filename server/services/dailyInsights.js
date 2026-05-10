@@ -58,7 +58,7 @@ async function generateInsights(newsItems, enterprises) {
           "Content-Type": "application/json",
           Authorization: `Bearer ${API_KEY}`,
         },
-        timeout: 90000,
+        timeout: Number(process.env.AI_HTTP_TIMEOUT_MS || 18000),
       }
     );
 

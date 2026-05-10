@@ -10,7 +10,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://pnrs.sz.gov.cn/zwgk/zcwj/zcjd/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -33,7 +33,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://ghzyj.gz.gov.cn/zwgk/zcwj/zcjd/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -56,7 +56,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://ghzyj.sh.gov.cn/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -79,7 +79,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://ghzzzyw.beijing.gov.cn/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -102,7 +102,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://ghzy.hangzhou.gov.cn/col/col1228926380/index.html", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -125,7 +125,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://mpnr.chengdu.gov.cn/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -148,7 +148,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://gh.wuhan.gov.cn/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];
@@ -171,7 +171,7 @@ const TARGET_SITES = [
     extract: async () => {
       try {
         const res = await axios.get("https://www.mohurd.gov.cn/wjfb/", {
-          headers: { "User-Agent": "Mozilla/5.0" }, timeout: 10000,
+          headers: { "User-Agent": "Mozilla/5.0" }, timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
         });
         const $ = cheerio.load(res.data);
         const items = [];

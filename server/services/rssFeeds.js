@@ -1,5 +1,6 @@
 const Parser = require("rss-parser");
 const parser = new Parser();
+const RSS_TIMEOUT = Number(process.env.RSS_TIMEOUT_MS || 6000);
 
 // 城市更新相关 RSS 源（按优先级排序）
 const RSS_SOURCES = [
@@ -60,7 +61,8 @@ async function fetchRSSFeeds(query) {
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-  for (const source of RSS_SOURCES) {
+  const settled = await Promise.all(RSS_SOURCES.map(async (source) => {
+    const startedAt = Date.now();
     try {
       let items = [];
 
@@ -68,7 +70,15 @@ async function fetchRSSFeeds(query) {
         // 对没有 RSS 的政府网站，直接爬取列表页
         items = await crawlHTMLList(source);
       } else {
-        const feed = await parser.parseURL(source.url);
+        const res = await axios.get(source.url, {
+          timeout: RSS_TIMEOUT,
+          responseType: "text",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+            "Accept": "application/rss+xml,application/xml,text/xml,text/html;q=0.8,*/*;q=0.5",
+          },
+        });
+        const feed = await parser.parseString(res.data);
         items = feed.items.map((item) => ({
           title: item.title,
           link: item.link,
@@ -92,11 +102,14 @@ async function fetchRSSFeeds(query) {
         return isMatch && isRecent;
       });
 
-      allItems.push(...filtered);
+      return filtered;
     } catch (err) {
-      console.error(`RSS 获取失败 ${source.name}:`, err.message);
+      console.error(`RSS 获取失败 ${source.name}:`, err.message, `(${Date.now() - startedAt}ms)`);
+      return [];
     }
-  }
+  }));
+
+  settled.forEach((items) => allItems.push(...items));
 
   return allItems
     .sort((a, b) => new Date(b.pubDate || 0) - new Date(a.pubDate || 0))
@@ -109,7 +122,7 @@ async function crawlHTMLList(source) {
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
       },
-      timeout: 10000,
+      timeout: RSS_TIMEOUT,
     });
     const $ = cheerio.load(res.data);
     const items = [];

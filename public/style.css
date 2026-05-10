@@ -1622,3 +1622,45 @@ body {
   display: flex;
   gap: 8px;
 }
+
+.source-status-panel {
+  margin-top: 14px;
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.source-status-panel h3 {
+  margin-bottom: 10px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+}
+
+.source-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px 72px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 12px;
+}
+
+.source-status-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-status-row strong,
+.source-status-row em {
+  font-style: normal;
+  text-align: right;
+}
+
+.source-status-row.ok strong { color: #34d399; }
+.source-status-row.empty strong { color: #fbbf24; }
+.source-status-row.failed strong { color: #f87171; }

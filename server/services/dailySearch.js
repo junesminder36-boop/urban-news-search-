@@ -1,6 +1,61 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 
+const HTTP_TIMEOUT = Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000);
+const ENGINE_TIMEOUT = Number(process.env.SEARCH_ENGINE_TIMEOUT_MS || 9000);
+const KEYWORD_TIMEOUT = Number(process.env.KEYWORD_TIMEOUT_MS || 12000);
+const CATEGORY_TIMEOUT = Number(process.env.CATEGORY_TIMEOUT_MS || 22000);
+const RESOLVE_BAIDU_LINKS = process.env.RESOLVE_BAIDU_LINKS === "true";
+
+let sourceStatus = [];
+
+function resetSourceStatus() {
+  sourceStatus = [];
+}
+
+function recordSource(name, status, count = 0, error = "", startedAt = Date.now()) {
+  sourceStatus.push({
+    name,
+    status,
+    count,
+    error: error ? String(error).slice(0, 160) : "",
+    ms: Date.now() - startedAt,
+  });
+}
+
+function getSourceStatus() {
+  return sourceStatus.slice();
+}
+
+async function withTimeout(promise, ms, label, fallback = []) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms);
+      }),
+    ]);
+  } catch (err) {
+    console.error(`${label} 超时/失败:`, err.message);
+    return fallback;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function timedSource(name, fn) {
+  const startedAt = Date.now();
+  try {
+    const items = await withTimeout(Promise.resolve().then(fn), ENGINE_TIMEOUT, name, []);
+    recordSource(name, items.length > 0 ? "ok" : "empty", items.length, "", startedAt);
+    return items;
+  } catch (err) {
+    recordSource(name, "failed", 0, err.message, startedAt);
+    return [];
+  }
+}
+
 // ========== 行业日报关键词 ==========
 const POLICY_KEYWORDS = [
   "老旧小区 改造 政策",
@@ -76,6 +131,22 @@ function extractSourceFromUrl(url) {
   }
 }
 
+function extractYahooUrl(url) {
+  try {
+    const match = url.match(/\/RU=([^/]+)/);
+    return match ? decodeURIComponent(match[1]) : url;
+  } catch {
+    return url;
+  }
+}
+
+function cleanYahooTitle(text) {
+  return (text || "")
+    .replace(/^.*›\s*[^\u4e00-\u9fa5A-Za-z]*/, "")
+    .replace(/^[A-Za-z0-9_./-]+(?=[\u4e00-\u9fa5])/, "")
+    .trim();
+}
+
 function extractSourceFromText(text) {
   if (!text) return "";
   // 百度结果中的来源格式通常是 "site.com · 日期" 或 "site.com"
@@ -124,7 +195,7 @@ async function resolveBaiduLink(baiduUrl) {
   try {
     const res = await axios.get(baiduUrl, {
       maxRedirects: 5,
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml",
@@ -278,7 +349,7 @@ async function searchBaidu(keyword, days = 3) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
     });
 
     const $ = cheerio.load(res.data);
@@ -314,13 +385,15 @@ async function searchBaidu(keyword, days = 3) {
       }
     });
 
-    const resolved = await Promise.all(
-      results.map(async (r) => {
-        const realUrl = await resolveBaiduLink(r.link);
-        const realSource = extractSourceFromUrl(realUrl);
-        return { ...r, link: realUrl, source: realSource || r.source };
-      })
-    );
+    const resolved = RESOLVE_BAIDU_LINKS
+      ? await Promise.all(
+          results.slice(0, 4).map(async (r) => {
+            const realUrl = await resolveBaiduLink(r.link);
+            const realSource = extractSourceFromUrl(realUrl);
+            return { ...r, link: realUrl, source: realSource || r.source };
+          })
+        )
+      : results;
 
     return resolved.filter(isValidResult).slice(0, 6);
   } catch (err) {
@@ -339,7 +412,7 @@ async function searchSogou(keyword, days = 3) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
     });
     const $ = cheerio.load(res.data);
     const results = [];
@@ -369,7 +442,7 @@ async function searchBing(keyword, days = 3) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: HTTP_TIMEOUT,
     });
     const $ = cheerio.load(res.data);
     const results = [];
@@ -389,14 +462,49 @@ async function searchBing(keyword, days = 3) {
   }
 }
 
+// ========== Yahoo 搜索（Bing 结果备用入口） ==========
+async function searchYahoo(keyword, days = 3) {
+  try {
+    const url = `https://search.yahoo.com/search?p=${encodeURIComponent(keyword + " 新闻")}`;
+    const res = await axios.get(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+      },
+      timeout: HTTP_TIMEOUT,
+    });
+    const $ = cheerio.load(res.data);
+    const results = [];
+    $(".dd.algo").each((_, el) => {
+      const linkEl = $(el).find(".compTitle a").first();
+      const rawTitle = linkEl.text().trim();
+      const title = cleanYahooTitle(rawTitle);
+      const rawLink = linkEl.attr("href");
+      const link = rawLink ? extractYahooUrl(rawLink) : "";
+      const abstract = $(el).find(".compText, .abstract, p").first().text().trim().replace(/\s+/g, " ");
+      const source = extractSourceFromUrl(link) || "Yahoo搜索";
+      const dateMatch = abstract.match(/[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}/);
+      const pubDate = dateMatch ? new Date(dateMatch[0]).toISOString() : new Date().toISOString();
+      if (title && link) {
+        results.push({ title, link, abstract, source, pubDate });
+      }
+    });
+    return results.filter(isValidResult).slice(0, 6);
+  } catch (err) {
+    console.error("Yahoo搜索失败:", err.message);
+    return [];
+  }
+}
+
 // ========== 多引擎聚合搜索 ==========
 async function searchAllEngines(keyword, days = 3) {
-  const [baidu, sogou, bing] = await Promise.all([
-    searchBaidu(keyword, days).catch((e) => { console.error("百度失败:", e.message); return []; }),
-    searchSogou(keyword, days).catch((e) => { console.error("搜狗失败:", e.message); return []; }),
-    searchBing(keyword, days).catch((e) => { console.error("Bing失败:", e.message); return []; }),
+  const [baidu, sogou, bing, yahoo] = await Promise.all([
+    timedSource(`百度:${keyword}`, () => searchBaidu(keyword, days)),
+    timedSource(`搜狗:${keyword}`, () => searchSogou(keyword, days)),
+    timedSource(`Bing:${keyword}`, () => searchBing(keyword, days)),
+    timedSource(`Yahoo:${keyword}`, () => searchYahoo(keyword, days)),
   ]);
-  const all = [...baidu, ...sogou, ...bing];
+  const all = [...baidu, ...sogou, ...bing, ...yahoo];
   const seen = new Set();
   return all.filter((item) => {
     const key = item.title.slice(0, 30);
@@ -406,71 +514,50 @@ async function searchAllEngines(keyword, days = 3) {
   }).slice(0, 8);
 }
 
+async function searchKeywordGroup(keywords, days, groupName, mapper = (item) => item) {
+  const tasks = keywords.map((kw) =>
+    withTimeout(searchAllEngines(kw, days), KEYWORD_TIMEOUT, `${groupName}:${kw}`, [])
+      .then((items) => items.map(mapper))
+  );
+  const groups = await withTimeout(Promise.all(tasks), CATEGORY_TIMEOUT, groupName, []);
+  return groups.flat();
+}
+
 // ========== 行业日报搜索 ==========
 async function searchPolicyNews(days = 3) {
-  const all = [];
-  for (const kw of POLICY_KEYWORDS) {
-    const results = await searchAllEngines(kw, days);
-    all.push(...results);
-  }
-  return all;
+  return searchKeywordGroup(POLICY_KEYWORDS, days, "政策法规");
 }
 
 async function searchIndustryNews(days = 3) {
-  const all = [];
-  for (const kw of INDUSTRY_KEYWORDS) {
-    const results = await searchAllEngines(kw, days);
-    all.push(...results);
-  }
-  return all;
+  return searchKeywordGroup(INDUSTRY_KEYWORDS, days, "行业要闻");
 }
 
 async function searchEnterpriseNews(days = 3) {
-  const all = [];
-  for (const ent of ENTERPRISES) {
-    for (const kw of ent.keywords) {
-      const results = await searchAllEngines(kw, days);
-      all.push(...results.map((r) => ({ ...r, enterprise: ent.name })));
-    }
-  }
-  return all;
+  const tasks = ENTERPRISES.flatMap((ent) =>
+    ent.keywords.map((kw) =>
+      withTimeout(searchAllEngines(kw, days), KEYWORD_TIMEOUT, `企业动态:${kw}`, [])
+        .then((items) => items.map((r) => ({ ...r, enterprise: ent.name })))
+    )
+  );
+  const groups = await withTimeout(Promise.all(tasks), CATEGORY_TIMEOUT, "企业动态", []);
+  return groups.flat();
 }
 
 // ========== 城市更新日报搜索 ==========
 async function searchCityPolicyNews(days = 3) {
-  const all = [];
-  for (const kw of CITY_POLICY_KEYWORDS) {
-    const results = await searchAllEngines(kw, days);
-    all.push(...results);
-  }
-  return all;
+  return searchKeywordGroup(CITY_POLICY_KEYWORDS, days, "城市更新中央政策");
 }
 
 async function searchCityLocalNews(days = 3) {
-  const all = [];
-  for (const kw of CITY_LOCAL_KEYWORDS) {
-    const results = await searchAllEngines(kw, days);
-    all.push(...results);
-  }
-  return all;
+  return searchKeywordGroup(CITY_LOCAL_KEYWORDS, days, "城市更新地方政策");
 }
 
 async function searchCityPracticeNews(days = 3) {
-  const all = [];
-  for (const kw of CITY_PRACTICE_KEYWORDS) {
-    const results = await searchAllEngines(kw, days);
-    all.push(...results);
-  }
-  return all;
+  return searchKeywordGroup(CITY_PRACTICE_KEYWORDS, days, "城市更新实践案例");
 }
 
 async function searchCityDigitalNews(days = 3) {
-  const all = [];
-  for (const kw of CITY_DIGITAL_KEYWORDS) {
-    const results = await searchAllEngines(kw, days);
-    all.push(...results);
-  }
-  return all;
+  return searchKeywordGroup(CITY_DIGITAL_KEYWORDS, days, "城市更新数字化");
 }
 
 // ========== 去重 ==========
@@ -560,6 +647,7 @@ function getChinaDateString() {
 
 // ========== 生成行业日报 ==========
 async function generateDailyReport(query, days = 3) {
+  resetSourceStatus();
   let [policyNews, industryNews, enterpriseNews] = await Promise.all([
     searchPolicyNews(days),
     searchIndustryNews(days),
@@ -568,7 +656,7 @@ async function generateDailyReport(query, days = 3) {
 
   // 如果用户输入了关键词，额外搜索一次
   if (query && query.trim()) {
-    const extra = await searchAllEngines(query.trim(), days);
+    const extra = await withTimeout(searchAllEngines(query.trim(), days), KEYWORD_TIMEOUT, `用户关键词:${query.trim()}`, []);
     industryNews.push(...extra);
   }
 
@@ -578,7 +666,9 @@ async function generateDailyReport(query, days = 3) {
   if (all.length === 0) {
     try {
       const { fetchRSSFeeds } = require("./rssFeeds");
-      const rssItems = await fetchRSSFeeds(query || "物业 地产 园区");
+      const startedAt = Date.now();
+      const rssItems = await withTimeout(fetchRSSFeeds(query || "物业 地产 园区"), CATEGORY_TIMEOUT, "RSS回退", []);
+      recordSource("RSS回退", rssItems.length > 0 ? "ok" : "empty", rssItems.length, "", startedAt);
       all = rssItems.map((item) => ({
         title: item.title,
         link: item.link,
@@ -596,7 +686,9 @@ async function generateDailyReport(query, days = 3) {
   if (all.length === 0) {
     try {
       const { crawlTargetedSites } = require("./targetedCrawler");
-      const crawled = await crawlTargetedSites(query || "城市更新");
+      const startedAt = Date.now();
+      const crawled = await withTimeout(crawlTargetedSites(query || "城市更新"), CATEGORY_TIMEOUT, "定向爬取回退", []);
+      recordSource("定向爬取回退", crawled.length > 0 ? "ok" : "empty", crawled.length, "", startedAt);
       all = crawled.map((item) => ({
         title: item.title,
         link: item.link,
@@ -614,7 +706,9 @@ async function generateDailyReport(query, days = 3) {
   if (all.length === 0) {
     try {
       const { searchAll } = require("./search");
-      const fallback = await searchAll(query || "物业 地产 园区");
+      const startedAt = Date.now();
+      const fallback = await withTimeout(searchAll(query || "物业 地产 园区"), CATEGORY_TIMEOUT, "聚合搜索回退", []);
+      recordSource("聚合搜索回退", fallback.length > 0 ? "ok" : "empty", fallback.length, "", startedAt);
       all = fallback.map((item) => ({
         title: item.title,
         link: item.link || item.url,
@@ -670,6 +764,7 @@ async function generateDailyReport(query, days = 3) {
     categories,
     results: mapped,
     date: getChinaDateString(),
+    sourceStatus: getSourceStatus(),
   };
 }
 
@@ -726,6 +821,7 @@ function extractKeywords(items) {
 
 // ========== 生成城市更新日报 ==========
 async function generateCityDailyReport(query, days = 3) {
+  resetSourceStatus();
   let [policyNews, localNews, practiceNews, digitalNews] = await Promise.all([
     searchCityPolicyNews(days),
     searchCityLocalNews(days),
@@ -735,7 +831,7 @@ async function generateCityDailyReport(query, days = 3) {
 
   // 如果用户输入了关键词，额外搜索一次
   if (query && query.trim()) {
-    const extra = await searchAllEngines(query.trim(), days);
+    const extra = await withTimeout(searchAllEngines(query.trim(), days), KEYWORD_TIMEOUT, `用户关键词:${query.trim()}`, []);
     localNews.push(...extra);
   }
 
@@ -745,7 +841,9 @@ async function generateCityDailyReport(query, days = 3) {
   if (all.length === 0) {
     try {
       const { fetchRSSFeeds } = require("./rssFeeds");
-      const rssItems = await fetchRSSFeeds(query || "城市更新");
+      const startedAt = Date.now();
+      const rssItems = await withTimeout(fetchRSSFeeds(query || "城市更新"), CATEGORY_TIMEOUT, "RSS回退", []);
+      recordSource("RSS回退", rssItems.length > 0 ? "ok" : "empty", rssItems.length, "", startedAt);
       all = rssItems.map((item) => ({
         title: item.title,
         link: item.link,
@@ -763,7 +861,9 @@ async function generateCityDailyReport(query, days = 3) {
   if (all.length === 0) {
     try {
       const { crawlTargetedSites } = require("./targetedCrawler");
-      const crawled = await crawlTargetedSites(query || "城市更新");
+      const startedAt = Date.now();
+      const crawled = await withTimeout(crawlTargetedSites(query || "城市更新"), CATEGORY_TIMEOUT, "定向爬取回退", []);
+      recordSource("定向爬取回退", crawled.length > 0 ? "ok" : "empty", crawled.length, "", startedAt);
       all = crawled.map((item) => ({
         title: item.title,
         link: item.link,
@@ -781,7 +881,9 @@ async function generateCityDailyReport(query, days = 3) {
   if (all.length === 0) {
     try {
       const { searchAll } = require("./search");
-      const fallback = await searchAll(query || "城市更新");
+      const startedAt = Date.now();
+      const fallback = await withTimeout(searchAll(query || "城市更新"), CATEGORY_TIMEOUT, "聚合搜索回退", []);
+      recordSource("聚合搜索回退", fallback.length > 0 ? "ok" : "empty", fallback.length, "", startedAt);
       all = fallback.map((item) => ({
         title: item.title,
         link: item.link || item.url,
@@ -844,6 +946,7 @@ async function generateCityDailyReport(query, days = 3) {
     results: mapped,
     keywords,
     date: getChinaDateString(),
+    sourceStatus: getSourceStatus(),
   };
 }
 

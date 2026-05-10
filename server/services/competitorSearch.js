@@ -1,5 +1,25 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+const RESOLVE_BAIDU_LINKS = process.env.RESOLVE_BAIDU_LINKS === "true";
+const KEYWORD_TIMEOUT = Number(process.env.KEYWORD_TIMEOUT_MS || 12000);
+const CATEGORY_TIMEOUT = Number(process.env.CATEGORY_TIMEOUT_MS || 22000);
+
+async function withTimeout(promise, ms, label, fallback = []) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} timeout after ${ms}ms`)), ms);
+      }),
+    ]);
+  } catch (err) {
+    console.error(`${label} 超时/失败:`, err.message);
+    return fallback;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function isValidResult(item) {
   const title = item.title || "";
@@ -56,7 +76,7 @@ async function resolveBaiduLink(baiduUrl) {
   try {
     const res = await axios.get(baiduUrl, {
       maxRedirects: 5,
-      timeout: 10000,
+      timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
       headers: {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml",
@@ -136,7 +156,7 @@ async function searchBaidu(keyword, days = 7) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
     });
 
     const $ = cheerio.load(res.data);
@@ -160,13 +180,15 @@ async function searchBaidu(keyword, days = 7) {
       }
     });
 
-    const resolved = await Promise.all(
-      results.map(async (r) => {
-        const realUrl = await resolveBaiduLink(r.link);
-        const realSource = extractSourceFromUrl(realUrl);
-        return { ...r, link: realUrl, source: realSource || r.source };
-      })
-    );
+    const resolved = RESOLVE_BAIDU_LINKS
+      ? await Promise.all(
+          results.slice(0, 4).map(async (r) => {
+            const realUrl = await resolveBaiduLink(r.link);
+            const realSource = extractSourceFromUrl(realUrl);
+            return { ...r, link: realUrl, source: realSource || r.source };
+          })
+        )
+      : results;
 
     return resolved.filter(isValidResult).slice(0, 5);
   } catch (err) {
@@ -184,7 +206,7 @@ async function searchSogou(keyword, days = 7) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
     });
     const $ = cheerio.load(res.data);
     const results = [];
@@ -213,7 +235,7 @@ async function searchBing(keyword, days = 7) {
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept-Language": "zh-CN,zh;q=0.9",
       },
-      timeout: 10000,
+      timeout: Number(process.env.SOURCE_HTTP_TIMEOUT_MS || 6000),
     });
     const $ = cheerio.load(res.data);
     const results = [];
@@ -301,16 +323,14 @@ function deduplicate(items) {
 }
 
 async function searchCompetitorNews(competitors, days = 7) {
-  const all = [];
-  for (const comp of competitors) {
-    for (const kw of comp.keywords) {
-      const results = await searchAllEngines(kw, days);
-      for (const r of results) {
-        all.push({ ...r, competitor: comp.name });
-      }
-    }
-  }
-  return deduplicate(all);
+  const tasks = competitors.flatMap((comp) =>
+    comp.keywords.map((kw) =>
+      withTimeout(searchAllEngines(kw, days), KEYWORD_TIMEOUT, `竞品:${kw}`, [])
+        .then((results) => results.map((r) => ({ ...r, competitor: comp.name })))
+    )
+  );
+  const groups = await withTimeout(Promise.all(tasks), CATEGORY_TIMEOUT, "竞品动态抓取", []);
+  return deduplicate(groups.flat());
 }
 
 async function generateCompetitorReport(selectedCompetitors, days = 7) {

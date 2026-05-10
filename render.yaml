@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: urban-news-search
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: KIMI_API_KEY
+        sync: false

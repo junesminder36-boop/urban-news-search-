@@ -84,7 +84,7 @@ function renderResults(data) {
     }
   }
   if (statsBar) {
-    statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
+    statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("") + renderSourceStatusSummary(data.sourceStatus);
   }
 
   if (summaryContent) {
@@ -133,7 +133,7 @@ function renderNewsList() {
   newsList.innerHTML = "";
 
   if (items.length === 0) {
-    newsList.innerHTML = `<div class="empty-state">该分类下暂无新闻</div>`;
+    newsList.innerHTML = `<div class="empty-state">该分类下暂无新闻</div>${renderSourceStatusPanel(currentData.sourceStatus)}`;
     return;
   }
 
@@ -160,6 +160,24 @@ function renderNewsList() {
     `;
     newsList.appendChild(card);
   });
+}
+
+function renderSourceStatusSummary(sourceStatus) {
+  if (!Array.isArray(sourceStatus) || sourceStatus.length === 0) return "";
+  const ok = sourceStatus.filter((s) => s.status === "ok").length;
+  const empty = sourceStatus.filter((s) => s.status === "empty").length;
+  const failed = sourceStatus.filter((s) => s.status === "failed" || s.status === "timeout").length;
+  return `<span>数据源：成功 ${ok} / 空 ${empty} / 失败 ${failed}</span>`;
+}
+
+function renderSourceStatusPanel(sourceStatus) {
+  if (!Array.isArray(sourceStatus) || sourceStatus.length === 0) return "";
+  const rows = sourceStatus.slice(0, 12).map((s) => {
+    const cls = s.status === "ok" ? "ok" : s.status === "empty" ? "empty" : "failed";
+    const label = s.status === "ok" ? "成功" : s.status === "empty" ? "无结果" : "失败";
+    return `<div class="source-status-row ${cls}"><span>${escapeHtml(s.name || "数据源")}</span><strong>${label}</strong><em>${Number(s.ms || 0)}ms</em></div>`;
+  }).join("");
+  return `<div class="source-status-panel"><h3>数据源诊断</h3>${rows}</div>`;
 }
 
 function formatDate(isoDate) {
