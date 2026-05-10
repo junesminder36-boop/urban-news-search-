@@ -155,15 +155,17 @@ async function searchBaiduNews(keyword) {
       }
     });
 
-    const resolved = RESOLVE_BAIDU_LINKS
-      ? await Promise.all(
-          results.slice(0, 4).map(async (r) => {
-            const realUrl = await resolveBaiduLink(r.link);
-            const realSource = extractSourceFromUrl(realUrl);
-            return { ...r, link: realUrl, source: realSource || r.source };
-          })
-        )
-      : results;
+    // 解析百度跳转链接为真实 URL（默认全部解析，否则用户点不开）
+    const resolved = await Promise.all(
+      results.map(async (r) => {
+        if (r.link.includes("baidu.com/link")) {
+          const realUrl = await resolveBaiduLink(r.link);
+          const realSource = extractSourceFromUrl(realUrl);
+          return { ...r, link: realUrl, source: realSource || r.source };
+        }
+        return r;
+      })
+    );
 
     return resolved.filter(isValidResult).slice(0, 8);
   } catch (err) {
