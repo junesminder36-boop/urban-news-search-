@@ -964,6 +964,140 @@ function formatIsoDate(iso) {
   }
 }
 
+function generateDailyMarkdown(results, dateStr) {
+  if (!results || results.length === 0) return "暂无新闻素材。";
+
+  const d = new Date(dateStr);
+  const dateCn = `${d.getFullYear()} 年 ${String(d.getMonth() + 1).padStart(2, "0")} 月 ${String(d.getDate()).padStart(2, "0")} 日`;
+
+  const endDate = dateStr;
+  const startD = new Date(d);
+  startD.setDate(startD.getDate() - 6);
+  const startDate = `${startD.getFullYear()}-${String(startD.getMonth() + 1).padStart(2, "0")}-${String(startD.getDate()).padStart(2, "0")}`;
+
+  const used = new Set();
+  const pick = (category, count) => {
+    const matched = results.filter((r) => r.category === category && !used.has(r.url));
+    const picked = matched.slice(0, count);
+    picked.forEach((r) => used.add(r.url));
+    if (picked.length < count) {
+      const fallback = results.filter((r) => !used.has(r.url)).slice(0, count - picked.length);
+      fallback.forEach((r) => used.add(r.url));
+      picked.push(...fallback);
+    }
+    return picked;
+  };
+
+  const policy = pick("政策法规速递", 3);
+  const industry = pick("行业要闻精选", 5);
+  const enterprise = pick("企业动态精选", 3);
+
+  let allSelected = [...policy, ...industry, ...enterprise];
+  if (allSelected.length < 10) {
+    const extra = results.filter((r) => !used.has(r.url)).slice(0, 10 - allSelected.length);
+    extra.forEach((r) => used.add(r.url));
+    allSelected.push(...extra);
+  }
+
+  // 生成洞察（基于前3条新闻标题简单拼接，后续可接入AI）
+  const topTitles = allSelected.slice(0, 3).map((r) => r.title);
+  const focusKeyword = extractFocusKeyword(topTitles);
+  const trendText = topTitles.join("；").slice(0, 60);
+
+  // 格式化各模块
+  let policyBody = "";
+  policy.forEach((r, i) => {
+    const pub = r.pubDate ? formatIsoDate(r.pubDate) : dateStr;
+    policyBody += `**【政策】${i + 1}. ${r.title}**\n`;
+    policyBody += `> 🏛 发文机构：${r.source || "相关部门"} ｜ 📅 发布时间：${pub}\n`;
+    policyBody += `> 💡 核心内容：${(r.abstract || "").slice(0, 80)}${(r.abstract || "").length > 80 ? "..." : ""}\n`;
+    policyBody += `> 🔗 [点击查看原文](${r.url})\n\n`;
+  });
+
+  let industryBody = "";
+  industry.forEach((r, i) => {
+    const pub = r.pubDate ? formatIsoDate(r.pubDate) : dateStr;
+    industryBody += `**【要闻】${i + 1}. ${r.title}**\n`;
+    industryBody += `> 📰 来源：${r.source || "行业媒体"} ｜ 📅 时间：${pub}\n`;
+    industryBody += `> 💡 摘要：${(r.abstract || "").slice(0, 100)}${(r.abstract || "").length > 100 ? "..." : ""}\n`;
+    industryBody += `> 🔗 [点击查看原文](${r.url})\n\n`;
+  });
+
+  let enterpriseBody = "";
+  enterprise.forEach((r, i) => {
+    const pub = r.pubDate ? formatIsoDate(r.pubDate) : dateStr;
+    const enterpriseName = r.enterprise || extractEnterpriseName(r.title) || "行业企业";
+    enterpriseBody += `**【企业】${i + 1}. ${enterpriseName} — ${r.title}**\n`;
+    enterpriseBody += `> 📰 来源：${r.source || "企业资讯"} ｜ 📅 时间：${pub}\n`;
+    enterpriseBody += `> 💼 动态描述：${(r.abstract || "").slice(0, 100)}${(r.abstract || "").length > 100 ? "..." : ""}\n`;
+    enterpriseBody += `> 💡 参考价值：<font color="info">关注该动态对物业服务模式的潜在影响</font>\n`;
+    enterpriseBody += `> 🔗 [点击查看原文](${r.url})\n\n`;
+  });
+
+  return `# 📊 今日行业日报
+
+> 📅 **日期**　${dateCn}
+> ⏰ **生成时间**　08:30:00
+> 🗓 **新闻窗口**　${startDate} ~ ${endDate}（近 7 日）
+> 📰 **总条数**　${allSelected.length} 条
+> 🎯 **今日聚焦**　<font color="info">${focusKeyword}</font>
+
+━━━━━━━━━━━━━━━
+
+## 📜 政策法规速递
+
+${policyBody || "> 今日暂无政策法规类新闻\n"}
+━━━━━━━━━━━━━━━
+
+## 📰 行业要闻精选
+
+${industryBody || "> 今日暂无行业要闻\n"}
+━━━━━━━━━━━━━━━
+
+## 🏢 企业动态精选
+
+${enterpriseBody || "> 今日暂无企业动态\n"}
+━━━━━━━━━━━━━━━
+
+## 🎯 优码今日洞察
+
+> **🔑 今日关键词**
+> ${focusKeyword}
+
+> **📈 趋势研判**
+> ${trendText}... 建议地产物业从业者持续关注数字化转型与组织能力升级趋势，结合优码 AI·Skills 技能体系提升团队专业度。
+
+> **📣 营销建议**
+> ① 围绕今日关键词策划公众号/朋友圈内容，突出优码在地产物业行业的专业洞察
+> ② 结合政策动态，输出"政策解读+技能落地"的系列内容
+
+> **🔮 明日关注**
+> 关注后续政策落地进展及头部企业动态，及时捕捉可借势的热点话题。
+
+━━━━━━━━━━━━━━━
+
+📌 **日报内容由优码数智库生成** ｜ 发布日期：${dateStr}
+🔗 [优码AI · 让组织能力可视化](https://youmatech.com/ai)`;
+}
+
+function extractFocusKeyword(titles) {
+  if (!titles || titles.length === 0) return "地产物业行业动态";
+  const combined = titles.join(" ");
+  const keywords = ["智慧物业", "数字化转型", "城市更新", "智慧社区", "物业管理", "REITs", "智慧城市", "智慧园区", "数字化", "物业", "地产"];
+  for (const kw of keywords) {
+    if (combined.includes(kw)) return kw;
+  }
+  return "地产物业行业动态";
+}
+
+function extractEnterpriseName(title) {
+  const enterprises = ["万科", "碧桂园", "龙湖", "万物云", "保利", "绿城", "中海", "华润", "招商蛇口", "金地", "融创", "恒大", "绿地", "世茂", "新城"];
+  for (const e of enterprises) {
+    if (title.includes(e)) return e;
+  }
+  return "";
+}
+
 function generateCityDailyMarkdown(results, dateStr) {
   if (!results || results.length === 0) return "暂无新闻素材。";
 
@@ -1039,4 +1173,4 @@ function generateCityDailyMarkdown(results, dateStr) {
   return `# 🏙️ 今日城市更新日报\n\n> 📅 **日期**　${dateCn}\n> ⏰ **生成时间**　08:00:00\n> 🗓 **新闻窗口**　${startDate} ~ ${endDate}（严格近 3 日）\n> 📰 **新闻总数**　${allSelected.length} 条\n> 🎯 **今日聚焦**　<font color="info">${focus}</font>\n${newsBody}\n━━━━━━━━━━━━━━━\n\n## 📊 今日一句话总结\n> <font color="comment">${summary}...</font>\n\n━━━━━━━━━━━━━━━\n\n📌 **日报内容由优码数智库生成** ｜ 发布日期：${dateStr}\n🔗 [优码AI · 让组织能力可视化](https://www.youmatech.com/youma_ai_website/index.html)`;
 }
 
-module.exports = { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown, ENTERPRISES };
+module.exports = { generateDailyReport, generateCityDailyReport, generateDailyMarkdown, generateCityDailyMarkdown, ENTERPRISES };

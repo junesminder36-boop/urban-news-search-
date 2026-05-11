@@ -4,7 +4,7 @@ const axios = require("axios");
 const { searchAll } = require("../services/search");
 const { batchFetch } = require("../services/crawler");
 const { summarizeNews, summarizeArticles } = require("../services/aiSummary");
-const { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown } = require("../services/dailySearch");
+const { generateDailyReport, generateCityDailyReport, generateDailyMarkdown, generateCityDailyMarkdown } = require("../services/dailySearch");
 const { generateCompetitorReport } = require("../services/competitorSearch");
 const { generateInsights } = require("../services/dailyInsights");
 const { ENTERPRISES } = require("../services/dailySearch");
@@ -138,9 +138,12 @@ router.get("/daily", async (req, res) => {
       ? await withTimeout(generateInsights(report.results, ENTERPRISES), AI_TIMEOUT, "AI洞察", {})
       : {};
 
+    const dailyReport = generateDailyMarkdown(report.results, report.date);
+
     res.json({
       ...report,
       insights,
+      dailyReport,
     });
   } catch (err) {
     console.error("日报接口错误:", err);
