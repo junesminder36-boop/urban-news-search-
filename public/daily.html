@@ -5,12 +5,161 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>今日行业日报 - 优码智库AI搜索站</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .page-header { margin-bottom: 28px; padding: 24px; }
+
+    .search-section { margin-bottom: 28px; }
+    .search-box.full-width {
+      max-width: 100%;
+      margin-bottom: 14px;
+    }
+    .search-actions-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .search-actions-row button {
+      padding: 12px 28px;
+      border-radius: 40px;
+      border: none;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    #searchBtn {
+      background: linear-gradient(135deg, #667eea, #a855f7);
+      color: #fff;
+    }
+    #searchBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+    #dailyBtn {
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: #fff;
+    }
+    #dailyBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+    }
+    #refreshBtn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.7);
+    }
+    #refreshBtn:hover {
+      background: rgba(255,255,255,0.12);
+      color: #fff;
+    }
+
+    .ai-assistant-simple {
+      text-align: center;
+      padding: 32px 0;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      margin-top: 8px;
+    }
+    .btn-generate-daily {
+      padding: 14px 40px;
+      border-radius: 40px;
+      border: none;
+      background: linear-gradient(135deg, #667eea, #a855f7);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 20px rgba(102,126,234,0.3);
+      transition: all 0.3s ease;
+    }
+    .btn-generate-daily:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(102,126,234,0.45);
+    }
+
+    .markdown-report {
+      margin-top: 28px;
+      animation: fadeIn 0.5s ease;
+    }
+    .markdown-report-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .markdown-report-header h3 {
+      color: #fff;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    #markdownContent {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 28px;
+      color: rgba(255,255,255,0.85);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      font-size: 14px;
+      line-height: 1.8;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    #markdownContent h1 {
+      font-size: 20px;
+      color: #fff;
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+    #markdownContent h2 {
+      font-size: 16px;
+      color: #a855f7;
+      margin: 20px 0 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-weight: 600;
+    }
+    #markdownContent strong {
+      color: #fff;
+    }
+    #markdownContent a {
+      color: #667eea;
+      text-decoration: none;
+    }
+    #markdownContent blockquote, #markdownContent .md-quote {
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      margin: 6px 0;
+      padding-left: 12px;
+      border-left: 2px solid rgba(102,126,234,0.4);
+    }
+    #markdownContent hr {
+      border: none;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      margin: 16px 0;
+    }
+
+    @media (max-width: 768px) {
+      .search-actions-row button {
+        flex: 1;
+        padding: 12px;
+        font-size: 14px;
+      }
+      .page-header { padding: 16px; }
+      .markdown-report-header h3 { font-size: 16px; }
+      #markdownContent { padding: 18px; }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
     <div class="back-nav">
       <a href="/">← 返回首页</a>
-      <span id="dailyDate" class="date"></span>
+      <span class="date">今日行业日报</span>
     </div>
 
     <header class="header page-header">
@@ -18,11 +167,14 @@
       <p>不动产行业每日精选：地产 · 物业 · 园区 · 医院</p>
     </header>
 
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="例如：万科、智慧物业、物业数字化..." />
-      <div class="search-actions">
+    <div class="search-section">
+      <div class="search-box full-width">
+        <input type="text" id="searchInput" placeholder="例如：万科、智慧物业、物业数字化..." />
+      </div>
+      <div class="search-actions-row">
         <button id="searchBtn">搜索</button>
-        <button id="dailyBtn" class="btn-daily">一键生成日报</button>
+        <button id="dailyBtn" class="btn-daily">一键生成今日新闻</button>
+        <button id="refreshBtn">刷新</button>
       </div>
     </div>
 
@@ -31,15 +183,14 @@
       <p>正在搜索政策法规、行业要闻、企业动态并生成洞察...</p>
     </div>
 
+    <!-- 新闻列表 -->
     <div id="results" class="results hidden">
-      <div class="stats-bar-wrap">
-        <div class="stats-bar stats-grow" id="statsBar"></div>
-        <button id="copyBtn" class="btn-daily stats-copy-btn">复制日报</button>
-      </div>
+      <div class="stats-bar" id="statsBar" style="margin-bottom: 20px;"></div>
 
-      <div class="section-card insight-card">
-        <h2>优码今日洞察</h2>
-        <div id="insightsContent"></div>
+      <div class="ai-summary-card">
+        <h2>AI 综合分析</h2>
+        <div id="summaryContent" class="summary-content"></div>
+        <div id="highlightsContent" class="highlights-content"></div>
       </div>
 
       <div class="category-tabs" id="categoryTabs">
@@ -48,252 +199,29 @@
         <button class="tab-btn" data-cat="行业要闻精选">行业要闻精选</button>
         <button class="tab-btn" data-cat="企业动态精选">企业动态精选</button>
       </div>
-
       <div id="newsList" class="news-list"></div>
+    </div>
+
+    <!-- AI日报助手 — 简化 -->
+    <div id="aiAssistant" class="ai-assistant-simple hidden">
+      <button id="generateReportBtn" class="btn-generate-daily">
+        生成行业日报 <span>✦</span>
+      </button>
+    </div>
+
+    <!-- Markdown 日报展示 -->
+    <div id="markdownReport" class="markdown-report hidden">
+      <div class="markdown-report-header">
+        <h3>今日行业日报</h3>
+        <button id="copyMarkdownBtn" class="btn-daily stats-copy-btn">复制日报</button>
+      </div>
+      <div id="markdownContent"></div>
     </div>
 
     <div id="error" class="error hidden"></div>
   </div>
 
-  <script>
-    document.getElementById("dailyDate").textContent = new Date().toLocaleDateString("zh-CN", {
-      year: "numeric", month: "long", day: "numeric", weekday: "long"
-    });
-
-    const searchInput = document.getElementById("searchInput");
-    const searchBtn = document.getElementById("searchBtn");
-    const dailyBtn = document.getElementById("dailyBtn");
-    const loading = document.getElementById("loading");
-    const results = document.getElementById("results");
-    const error = document.getElementById("error");
-    const statsBar = document.getElementById("statsBar");
-    const newsList = document.getElementById("newsList");
-    const categoryTabs = document.getElementById("categoryTabs");
-
-    let currentData = null;
-    let activeCategory = "all";
-
-    searchBtn.addEventListener("click", doSearch);
-    searchInput.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") doSearch();
-    });
-
-    if (dailyBtn) {
-      dailyBtn.addEventListener("click", () => {
-        searchInput.value = "";
-        doSearch();
-      });
-    }
-
-    categoryTabs.addEventListener("click", (e) => {
-      if (e.target.classList.contains("tab-btn")) {
-        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-        e.target.classList.add("active");
-        activeCategory = e.target.dataset.cat;
-        renderNewsList();
-      }
-    });
-
-    async function doSearch() {
-      const query = searchInput.value.trim();
-
-      searchBtn.disabled = true;
-      searchBtn.textContent = "搜索中";
-      results.classList.add("hidden");
-      error.classList.add("hidden");
-      loading.classList.remove("hidden");
-
-      try {
-        const url = query
-          ? `/api/daily?q=${encodeURIComponent(query)}`
-          : "/api/daily";
-        const res = await fetch(url);
-        const data = await readApiJson(res);
-
-        loading.classList.add("hidden");
-        searchBtn.disabled = false;
-        searchBtn.textContent = "搜索";
-
-        if (data.error) {
-          showError(data.error);
-          return;
-        }
-
-        currentData = data;
-        renderResults(data);
-      } catch (err) {
-        loading.classList.add("hidden");
-        searchBtn.disabled = false;
-        searchBtn.textContent = "搜索";
-        showError(`请求失败: ${err.message}`);
-      }
-    }
-
-    function resetCategory() {
-      activeCategory = "all";
-      document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
-      document.querySelector('.tab-btn[data-cat="all"]').classList.add("active");
-    }
-
-    function renderResults(data) {
-      results.classList.remove("hidden");
-      resetCategory();
-
-      const catCounts = [];
-      if (data.categories) {
-        for (const [cat, items] of Object.entries(data.categories)) {
-          if (items.length > 0) {
-            catCounts.push(`${cat}: ${items.length}条`);
-          }
-        }
-      }
-      statsBar.innerHTML = `<span>共找到 ${data.total || 0} 条新闻</span>` + catCounts.map((c) => `<span>${escapeHtml(c)}</span>`).join("");
-
-      const insights = data.insights || {};
-      document.getElementById("insightsContent").innerHTML = `
-        <div class="insight-section">
-          <h4>关键词</h4>
-          <p>${escapeHtml(insights.keywords || "暂无")}</p>
-        </div>
-        <div class="insight-section">
-          <h4>趋势研判</h4>
-          <p>${escapeHtml(insights.trend || "暂无")}</p>
-        </div>
-        <div class="insight-section">
-          <h4>营销建议</h4>
-          <p>${escapeHtml(insights.marketing || "暂无")}</p>
-        </div>
-        <div class="insight-section">
-          <h4>明日关注</h4>
-          <p>${escapeHtml(insights.tomorrow || "暂无")}</p>
-        </div>
-      `;
-
-      renderNewsList();
-    }
-
-    function renderNewsList() {
-      if (!currentData) return;
-
-      let items = [];
-      if (activeCategory === "all") {
-        items = currentData.results || [];
-      } else if (currentData.categories && currentData.categories[activeCategory]) {
-        items = currentData.categories[activeCategory];
-      }
-
-      newsList.innerHTML = "";
-
-      if (items.length === 0) {
-        newsList.innerHTML = '<div class="empty-state">该分类下暂无新闻</div>';
-        return;
-      }
-
-      items.forEach((r) => {
-        const card = document.createElement("a");
-        card.className = "news-card";
-        card.href = r.url;
-        card.target = "_blank";
-        card.rel = "noopener";
-
-        const dateStr = r.pubDate ? formatDate(r.pubDate) : "";
-        const enterpriseTag = r.enterprise ? `<span class="enterprise-tag">${escapeHtml(r.enterprise)}</span>` : "";
-        const catClass = `cat-${r.category || "行业要闻精选"}`;
-
-        card.innerHTML = `
-          <div class="news-card-header">
-            <h3>${escapeHtml(r.title)}${enterpriseTag}</h3>
-            <span class="news-category ${catClass}">${escapeHtml(r.category || "行业要闻精选")}</span>
-          </div>
-          <p>${escapeHtml(r.abstract || "")}</p>
-          <div class="news-meta">
-            <span class="source">${escapeHtml(r.source || "未知来源")}</span>
-            ${dateStr ? `<span class="date">${dateStr}</span>` : ""}
-          </div>
-        `;
-        newsList.appendChild(card);
-      });
-    }
-
-    function formatDate(isoDate) {
-      try {
-        const d = new Date(isoDate);
-        const year = d.getFullYear();
-        const month = (d.getMonth() + 1).toString().padStart(2, "0");
-        const day = d.getDate().toString().padStart(2, "0");
-        return `${year}-${month}-${day}`;
-      } catch {
-        return "";
-      }
-    }
-
-    function showError(msg) {
-      error.textContent = msg;
-      error.classList.remove("hidden");
-    }
-
-    function escapeHtml(text) {
-      const div = document.createElement("div");
-      div.textContent = text;
-      return div.innerHTML;
-    }
-
-    async function readApiJson(res) {
-      const contentType = res.headers.get("content-type") || "";
-      if (!res.ok) {
-        throw new Error(`接口返回 ${res.status}，请确认后端服务已连接`);
-      }
-      if (!contentType.includes("application/json")) {
-        throw new Error("接口未返回 JSON，请确认当前不是纯静态预览环境");
-      }
-      return res.json();
-    }
-
-    function copyDailyContent() {
-      if (!currentData || !currentData.results) {
-        showToast("请先生成日报");
-        return;
-      }
-      const dateStr = new Date().toLocaleDateString("zh-CN");
-      let text = `今日行业日报 (${dateStr})\n\n`;
-      const items = currentData.results || [];
-      items.forEach((r, i) => {
-        const date = r.pubDate ? formatDate(r.pubDate) : "";
-        text += `${i + 1}. [${r.category || "新闻"}] ${r.title}\n`;
-        if (r.abstract) text += `   ${r.abstract}\n`;
-        if (r.source) text += `   来源: ${r.source}`;
-        if (date) text += ` | ${date}`;
-        text += `\n   链接: ${r.url}\n\n`;
-      });
-      navigator.clipboard.writeText(text).then(() => {
-        showToast("日报内容已复制");
-      }).catch(() => {
-        showToast("复制失败，请手动复制");
-      });
-    }
-
-    document.getElementById("copyBtn").addEventListener("click", copyDailyContent);
-
-    function showToast(message) {
-      let toast = document.getElementById("toast");
-      if (!toast) {
-        toast = document.createElement("div");
-        toast.id = "toast";
-        toast.className = "toast";
-        document.body.appendChild(toast);
-      }
-      toast.textContent = message;
-      toast.classList.add("show");
-      clearTimeout(showToast.timer);
-      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
-    }
-
-    const initialQuery = new URLSearchParams(location.search).get("q");
-    if (initialQuery) {
-      searchInput.value = initialQuery;
-      doSearch();
-    }
-  </script>
+  <script src="app.js"></script>
   <script src="assistant.js"></script>
 </body>
 </html>

@@ -140,8 +140,20 @@ router.get("/daily", async (req, res) => {
 
     const dailyReport = generateDailyMarkdown(report.results, report.date);
 
+    // 将 insights 映射为 summary/highlights，让 app.js 统一渲染
+    const summaryText = insights.trend
+      ? `【趋势研判】${insights.trend}`
+      : (dailyReport ? "日报已生成，点击下方按钮查看完整版。" : "暂无 AI 分析结果。");
+    const highlightsList = [
+      insights.keywords ? `关键词：${insights.keywords}` : "",
+      insights.marketing ? `营销建议：${insights.marketing}` : "",
+      insights.tomorrow ? `明日关注：${insights.tomorrow}` : "",
+    ].filter(Boolean);
+
     res.json({
       ...report,
+      summary: summaryText,
+      highlights: highlightsList.length > 0 ? highlightsList : [],
       insights,
       dailyReport,
     });
