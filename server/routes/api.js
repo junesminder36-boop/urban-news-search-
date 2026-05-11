@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const axios = require("axios");
 const { searchAll } = require("../services/search");
 const { batchFetch } = require("../services/crawler");
 const { summarizeNews, summarizeArticles } = require("../services/aiSummary");
@@ -7,6 +8,10 @@ const { generateDailyReport, generateCityDailyReport, generateCityDailyMarkdown 
 const { generateCompetitorReport } = require("../services/competitorSearch");
 const { generateInsights } = require("../services/dailyInsights");
 const { ENTERPRISES } = require("../services/dailySearch");
+
+const KIMI_API_URL = "https://api.moonshot.cn/v1/chat/completions";
+const KIMI_API_KEY = process.env.KIMI_API_KEY || "";
+const KIMI_MODEL = "moonshot-v1-8k";
 
 const ROUTE_TIMEOUT = Number(process.env.ROUTE_TIMEOUT_MS || 55000);
 const AI_TIMEOUT = Number(process.env.AI_TIMEOUT_MS || 18000);
@@ -226,6 +231,49 @@ router.get("/competitor", async (req, res) => {
   } catch (err) {
     console.error("竞品动态接口错误:", err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+/* ===== AI 小助手聊天接口 ===== */
+router.post("/chat", async (req, res) => {
+  const { message } = req.body;
+  if (!message || !message.trim()) {
+    return res.status(400).json({ error: "请输入消息" });
+  }
+
+  if (!KIMI_API_KEY) {
+    return res.status(500).json({ error: "未配置 KIMI_API_KEY" });
+  }
+
+  try {
+    const response = await axios.post(
+      KIMI_API_URL,
+      {
+        model: KIMI_MODEL,
+        messages: [
+          {
+            role: "system",
+            content: `你是优码智库AI搜索站的小助手"优小码"，一个像素风格的AI宠物。你擅长城市更新、不动产、物业管理、招投标等领域。回答简洁专业，适当活泼可爱。如果用户要求搜索，你可以引导他使用搜索框；如果要求生成日报，告诉他点击对应页面的一键生成按钮。`,
+          },
+          { role: "user", content: message.trim() },
+        ],
+        temperature: 0.7,
+        max_tokens: 1024,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${KIMI_API_KEY}`,
+        },
+        timeout: Number(process.env.AI_HTTP_TIMEOUT_MS || 18000),
+      }
+    );
+
+    const reply = response.data.choices?.[0]?.message?.content || "抱歉，我暂时没反应过来，请再试一次~";
+    res.json({ reply });
+  } catch (err) {
+    console.error("AI 聊天接口错误:", err.message);
+    res.status(500).json({ error: `AI 服务暂时不可用: ${err.message}` });
   }
 });
 
