@@ -1799,35 +1799,44 @@ body {
 .pet-arm {
   position: absolute;
   bottom: 14px;
-  width: 8px;
-  height: 14px;
-  background: #e08e6d;
-  border-radius: 3px;
+  width: 7px;
+  height: 22px;
+  background: linear-gradient(to bottom, #e08e6d 60%, #d47a5a 100%);
+  border-radius: 3px 3px 5px 5px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   transform-origin: top center;
-  z-index: 2;
+  z-index: 5;
 }
 
 .pet-arm.left {
-  left: 6px;
-  transform: rotate(25deg);
-  animation: typing-left 0.1s infinite alternate;
+  left: 7px;
+  transform: rotate(22deg);
+  animation: typing-left 0.08s infinite alternate;
 }
 
 .pet-arm.right {
-  right: 6px;
-  transform: rotate(-25deg);
-  animation: typing-right 0.1s infinite alternate;
+  right: 7px;
+  transform: rotate(-22deg);
+  animation: typing-right 0.08s infinite alternate;
 }
 
 @keyframes typing-left {
-  0% { transform: rotate(25deg) translateY(0); }
-  100% { transform: rotate(35deg) translateY(3px); }
+  0% { transform: rotate(22deg) translateY(0); }
+  100% { transform: rotate(28deg) translateY(6px); }
 }
 
 @keyframes typing-right {
-  0% { transform: rotate(-25deg) translateY(3px); }
-  100% { transform: rotate(-35deg) translateY(0); }
+  0% { transform: rotate(-22deg) translateY(6px); }
+  100% { transform: rotate(-28deg) translateY(0); }
+}
+
+/* 被敲到的按键高亮 */
+.key:nth-child(1) { animation: key-hit 0.16s infinite; }
+.key:nth-child(4) { animation: key-hit 0.16s infinite 0.08s; }
+
+@keyframes key-hit {
+  0%, 100% { background: #718096; transform: translateY(0); }
+  50% { background: #a0aec0; transform: translateY(1.5px); box-shadow: 0 0 3px rgba(160, 174, 192, 0.5); }
 }
 
 /* 键盘 */
