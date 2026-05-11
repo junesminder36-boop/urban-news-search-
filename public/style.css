@@ -1795,6 +1795,41 @@ body {
   50% { transform: scaleY(0.15); }
 }
 
+/* 小手 — 疯狂敲键盘 */
+.pet-arm {
+  position: absolute;
+  bottom: 14px;
+  width: 8px;
+  height: 14px;
+  background: #e08e6d;
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  transform-origin: top center;
+  z-index: 2;
+}
+
+.pet-arm.left {
+  left: 6px;
+  transform: rotate(25deg);
+  animation: typing-left 0.1s infinite alternate;
+}
+
+.pet-arm.right {
+  right: 6px;
+  transform: rotate(-25deg);
+  animation: typing-right 0.1s infinite alternate;
+}
+
+@keyframes typing-left {
+  0% { transform: rotate(25deg) translateY(0); }
+  100% { transform: rotate(35deg) translateY(3px); }
+}
+
+@keyframes typing-right {
+  0% { transform: rotate(-25deg) translateY(3px); }
+  100% { transform: rotate(-35deg) translateY(0); }
+}
+
 /* 键盘 */
 .pet-keyboard {
   position: absolute;

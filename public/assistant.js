@@ -25,6 +25,8 @@
           <div class="pet-eye left"></div>
           <div class="pet-eye right"></div>
         </div>
+        <div class="pet-arm left"></div>
+        <div class="pet-arm right"></div>
         <div class="pet-keyboard">
           <div class="key-row">
             <span class="key"></span><span class="key"></span><span class="key"></span>
